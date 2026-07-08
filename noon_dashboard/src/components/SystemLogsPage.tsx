@@ -1,4 +1,5 @@
-import { Terminal, Shield, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export type LogType = 'info' | 'success' | 'warning' | 'error';
@@ -17,22 +18,30 @@ interface SystemLogsPageProps {
 }
 
 export function SystemLogsPage({ logs, onClear }: SystemLogsPageProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [logs]);
+
   const getLogColor = (type: LogType) => {
     switch (type) {
-      case 'success': return '#34d399';
-      case 'warning': return '#fbbf24';
-      case 'error': return '#f87171';
-      default: return '#60a5fa';
+      case 'success': return '#60a5fa'; // 蓝色代表任务完成
+      case 'warning': return '#fbbf24'; // 黄色警告
+      case 'error': return '#f87171';   // 红色错误
+      default: return '#34d399';        // 默认极客绿
     }
   };
 
-  const getLogIcon = (type: LogType) => {
-    switch (type) {
-      case 'success': return <CheckCircle2 size={14} style={{ color: '#34d399' }} />;
-      case 'warning': return <Shield size={14} style={{ color: '#fbbf24' }} />;
-      case 'error': return <AlertCircle size={14} style={{ color: '#f87171' }} />;
-      default: return <Info size={14} style={{ color: '#60a5fa' }} />;
-    }
+  const getLogOpacity = (index: number, total: number) => {
+    const diff = total - 1 - index;
+    if (diff === 0) return 1;
+    if (diff <= 2) return 0.85;
+    if (diff <= 5) return 0.6;
+    if (diff <= 10) return 0.4;
+    return 0.25;
   };
 
   return (
@@ -66,38 +75,59 @@ export function SystemLogsPage({ logs, onClear }: SystemLogsPageProps) {
           background: '#0a0c10', 
           border: '1px solid #1f2937', 
           borderRadius: '12px',
-          padding: '1rem',
+          padding: '1.5rem',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5)',
           overflow: 'hidden'
         }}
       >
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #1f2937' }}>
+        {/* Terminal Header */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #1f2937' }}>
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f87171' }}></div>
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#fbbf24' }}></div>
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#34d399' }}></div>
           <span style={{ marginLeft: '1rem', fontSize: '0.75rem', color: '#6b7280', fontFamily: 'monospace' }}>bash - root@noon-dashboard:~</span>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', fontFamily: '"Fira Code", Consolas, monospace', fontSize: '0.85rem' }}>
+        {/* Terminal Logs */}
+        <div 
+          ref={containerRef}
+          style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            fontFamily: '"Fira Code", Consolas, monospace', 
+            fontSize: '0.85rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.6rem',
+            paddingRight: '1rem'
+          }}
+        >
           {logs.length === 0 ? (
             <div style={{ color: '#6b7280', fontStyle: 'italic', padding: '1rem' }}>暂无日志记录...</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {logs.map((log) => (
-                <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', lineHeight: '1.5' }}>
-                  <span style={{ color: '#6b7280', minWidth: '70px' }}>
-                    [{log.timestamp.toLocaleTimeString('en-US', { hour12: false })}]
-                  </span>
-                  <div style={{ marginTop: '0.15rem' }}>
-                    {getLogIcon(log.type)}
-                  </div>
-                  <span style={{ color: '#94a3b8', minWidth: '90px' }}>[{log.source}]</span>
-                  <span style={{ color: getLogColor(log.type), wordBreak: 'break-all' }}>{log.message}</span>
-                </div>
+            <>
+              {logs.map((log, i) => (
+                <motion.div 
+                  key={log.id}
+                  initial={{ opacity: 0, x: -10 }} 
+                  animate={{ opacity: getLogOpacity(i, logs.length), x: 0 }}
+                  style={{ 
+                    color: getLogColor(log.type),
+                    lineHeight: '1.5',
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  {`> ${log.message}`}
+                </motion.div>
               ))}
-            </div>
+              <motion.div
+                animate={{ opacity: [1, 0] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                style={{ width: '8px', height: '15px', background: '#34d399', marginTop: '0.25rem' }}
+              />
+            </>
           )}
         </div>
       </div>
