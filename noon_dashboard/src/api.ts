@@ -97,3 +97,21 @@ export interface ReviewResponse {
   count: number;
   intercepted: boolean;
 }
+
+export interface CategoryAnalysisJob {
+  job_id: string;
+  message: string;
+  total_products: number;
+}
+
+export interface CategoryAnalysisResponse extends ReviewResponse {
+  category: string;
+  product_count: number;
+  review_count: number;
+}
+
+export const startCategoryAnalysis = (category: string) =>
+  api.post<CategoryAnalysisJob>('/reviews/category/analyze', { category });
+
+export const getCategoryAnalysis = (category: string, reviewLimit = 50) =>
+  api.get<CategoryAnalysisResponse>(`/reviews/category/analysis?category=${encodeURIComponent(category)}&review_limit=${reviewLimit}`);

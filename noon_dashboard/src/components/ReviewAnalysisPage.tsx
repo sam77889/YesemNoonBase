@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, AlertTriangle, Info, AlertCircle, CheckCircle2, MessageSquare, Star, ThumbsUp, ThumbsDown, Meh, Zap, Shield, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, Loader2, AlertTriangle, Info, AlertCircle, CheckCircle2, MessageSquare, Star, ThumbsUp, ThumbsDown, Meh, Zap, Shield, FileText, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { api } from '../api';
-import type { ReviewResponse } from '../api';
+import { api, startCategoryAnalysis, getCategoryAnalysis } from '../api';
+import type { ReviewResponse, CategoryAnalysisResponse } from '../api';
+import { CategoryTabs } from './CategoryTabs';
 
 interface ReviewAnalysisPageProps {
   initialSku?: string;
   autoRun?: boolean;
   onAutoRunConsumed?: () => void;
   onExecutionUpdate?: (id: string, title: string, source: 'analysis', status: 'running'|'success'|'error', progress: number, logs: string[]) => void;
+  categoryTabs?: [string, number][];
 }
 
 const SENTIMENT_COLORS = {
@@ -24,12 +26,12 @@ const SENTIMENT_COLORS = {
 
 const RATING_COLORS = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399'];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { color: string; name: string; value: string | number }[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ background: 'rgba(15, 17, 26, 0.9)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
         {label && <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#f8fafc' }}>{label}</p>}
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index) => (
           <p key={index} style={{ margin: 0, color: entry.color, fontSize: '0.875rem' }}>
             {entry.name}: <span style={{ fontWeight: 600 }}>{entry.value}</span>
           </p>
@@ -40,19 +42,35 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 }
 
-export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onExecutionUpdate }: ReviewAnalysisPageProps) {
+export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onExecutionUpdate, categoryTabs }: ReviewAnalysisPageProps) {
+  const [mode, setMode] = useState<'sku' | 'category'>('sku');
   const [skuInput, setSkuInput] = useState(initialSku || '');
-  const [data, setData] = useState<ReviewResponse | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryTabs?.[0]?.[0] || '');
+  const [data, setData] = useState<ReviewResponse | CategoryAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const loadingLogsInterval = useRef<any>(null);
+  const loadingLogsInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (mode !== 'sku') return;
     if (initialSku) setSkuInput(initialSku);
     if (autoRun && initialSku) {
       handleAnalyze(initialSku);
       if (onAutoRunConsumed) onAutoRunConsumed();
     }
   }, [initialSku, autoRun]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingLogsInterval.current) {
+        clearInterval(loadingLogsInterval.current);
+      }
+      if (pollInterval.current) {
+        clearInterval(pollInterval.current);
+      }
+    };
+  }, []);
 
   const handleAnalyze = async (targetSku: string) => {
     if (!targetSku.trim()) return;
@@ -127,6 +145,94 @@ export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onE
     setLoading(false);
   };
 
+  const handleCategoryAnalyze = async (category: string) => {
+    if (!category || category === 'All') return;
+    setLoading(true);
+    setData(null);
+
+    if (pollInterval.current) {
+      clearInterval(pollInterval.current);
+      pollInterval.current = null;
+    }
+
+    const execId = `category-analysis-${Date.now()}`;
+    const title = `深度分析 - 类目: ${category}`;
+    let currentLogs: string[] = [];
+    let currentProgress = 0;
+
+    const updateGlobal = (msg: string, isEnd = false, err = false) => {
+      currentLogs.push(msg);
+      if (isEnd) currentProgress = 100;
+      else currentProgress = Math.min(95, currentProgress + 10);
+      const status = isEnd ? (err ? 'error' : 'success') : 'running';
+      if (onExecutionUpdate) {
+        onExecutionUpdate(execId, title, 'analysis', status, currentProgress, [...currentLogs]);
+      }
+    };
+
+    updateGlobal(`> 初始化针对类目 [${category}] 的评论聚合分析任务...`);
+
+    try {
+      const startRes = await startCategoryAnalysis(category);
+      const { job_id, total_products } = startRes.data;
+      updateGlobal(`> 已创建后台任务 ${job_id}，覆盖 ${total_products} 个商品...`);
+
+      pollInterval.current = setInterval(async () => {
+        try {
+          const taskRes = await api.get(`/tasks/${encodeURIComponent(job_id)}`);
+          const task = taskRes.data;
+          updateGlobal(`> 任务状态: ${task.status}...`);
+
+          if (task.status === 'SUCCESS') {
+            if (pollInterval.current) {
+              clearInterval(pollInterval.current);
+              pollInterval.current = null;
+            }
+            updateGlobal(`> 后台抓取完成，正在聚合分析...`);
+            const analysisRes = await getCategoryAnalysis(category);
+            updateGlobal(`> 分析完成！成功聚合类目评论数据。`, true, false);
+            setData(analysisRes.data);
+            setLoading(false);
+          } else if (task.status === 'FAILED') {
+            if (pollInterval.current) {
+              clearInterval(pollInterval.current);
+              pollInterval.current = null;
+            }
+            updateGlobal(`> [错误] 后台任务失败: ${task.error_message || '未知错误'}`, true, true);
+            setData({
+              status: 'error',
+              message: task.error_message || '类目评论分析失败',
+              reviews: [],
+              analysis: {
+                rating_distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
+                average_rating: 0,
+                sentiment_distribution: { positive: 0, neutral: 0, negative: 0 },
+                top_keywords: [],
+                timeline: []
+              },
+              count: 0,
+              intercepted: false,
+              category,
+              product_count: 0,
+              review_count: 0,
+            } as CategoryAnalysisResponse);
+            setLoading(false);
+          }
+        } catch (err: any) {
+          if (pollInterval.current) {
+            clearInterval(pollInterval.current);
+            pollInterval.current = null;
+          }
+          updateGlobal(`> [错误] 轮询任务状态失败: ${err?.response?.data?.detail || err.message}`, true, true);
+          setLoading(false);
+        }
+      }, 5000);
+    } catch (err: any) {
+      updateGlobal(`> [错误] 启动类目分析失败: ${err?.response?.data?.detail || err.message}`, true, true);
+      setLoading(false);
+    }
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -157,7 +263,7 @@ export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onE
       return (
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
           <MessageSquare size={48} style={{ opacity: 0.2, margin: '0 auto 1rem auto' }} />
-          <p>输入 SKU 并点击开始分析，获取深度评论洞察</p>
+          <p>输入 SKU 或选择类目并点击开始分析，获取深度评论洞察</p>
         </div>
       );
     }
@@ -259,6 +365,14 @@ export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onE
         <div style={{ marginBottom: '1.5rem' }}>
           {renderStatusBanner()}
         </div>
+
+        {/* Category Aggregate Info */}
+        {'category' in data && (
+          <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(96, 165, 250, 0.08)', border: '1px solid rgba(96, 165, 250, 0.2)', color: 'var(--text-main)', fontSize: '0.9rem' }}>
+            <BarChart3 size={16} style={{ verticalAlign: 'middle', marginRight: '0.5rem', color: 'var(--primary)' }} />
+            类目聚合：<strong>{data.category}</strong> · {data.product_count} 个商品 · {data.review_count} 条评论
+          </div>
+        )}
 
         {/* AI Summary */}
         {status === 'success' && count > 0 && summary && (
@@ -653,36 +767,89 @@ export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onE
             <MessageSquare size={28} style={{ color: 'var(--primary)' }} />
             深度分析
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>输入商品 SKU 获取 AI 评论分析、情感趋势与用户画像</p>
+          <p style={{ color: 'var(--text-muted)' }}>输入 SKU 或选择类目，获取 AI 评论分析、情感趋势与用户画像</p>
         </div>
       </div>
 
       <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-        <form 
-          onSubmit={(e) => { e.preventDefault(); handleAnalyze(skuInput); }}
-          style={{ display: 'flex', gap: '1rem', maxWidth: '800px' }}
-        >
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="input"
-              placeholder="输入 SKU (如 N12345678A)..."
-              style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
-              value={skuInput}
-              onChange={(e) => setSkuInput(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          <button 
-            type="submit" 
-            className="btn" 
-            disabled={loading || !skuInput.trim()}
-            style={{ height: '54px', padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <button
+            type="button"
+            onClick={() => setMode('sku')}
+            disabled={loading}
+            style={{
+              padding: '0.5rem 1.25rem', borderRadius: '12px', border: '1px solid var(--panel-border)',
+              background: mode === 'sku' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+              color: mode === 'sku' ? 'white' : 'var(--text-muted)',
+              cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 500, transition: 'all 0.2s'
+            }}
           >
-            {loading ? <Loader2 size={20} className="spin" /> : '开始分析'}
+            单品 SKU
           </button>
-        </form>
+          <button
+            type="button"
+            onClick={() => setMode('category')}
+            disabled={loading}
+            style={{
+              padding: '0.5rem 1.25rem', borderRadius: '12px', border: '1px solid var(--panel-border)',
+              background: mode === 'category' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+              color: mode === 'category' ? 'white' : 'var(--text-muted)',
+              cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 500, transition: 'all 0.2s'
+            }}
+          >
+            类目聚合
+          </button>
+        </div>
+
+        {mode === 'sku' ? (
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleAnalyze(skuInput); }}
+            style={{ display: 'flex', gap: '1rem', maxWidth: '800px' }}
+          >
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                className="input"
+                placeholder="输入 SKU (如 N12345678A)..."
+                style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
+                value={skuInput}
+                onChange={(e) => setSkuInput(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn"
+              disabled={loading || !skuInput.trim()}
+              style={{ height: '54px', padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}
+            >
+              {loading ? <Loader2 size={20} className="spin" /> : '开始分析'}
+            </button>
+          </form>
+        ) : (
+          <div>
+            <CategoryTabs
+              tabs={categoryTabs || []}
+              selected={selectedCategory}
+              onChange={(c) => setSelectedCategory(c === 'All' ? '' : c)}
+            />
+            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={loading || !selectedCategory}
+                onClick={() => handleCategoryAnalyze(selectedCategory)}
+                style={{ height: '46px', padding: '0 1.5rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}
+              >
+                {loading ? <Loader2 size={18} className="spin" /> : '开始品类分析'}
+              </button>
+              {!selectedCategory && (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>请选择一个具体类目</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {renderContent()}

@@ -62,3 +62,27 @@ class PriceSnapshotResponse(BaseModel):
 class ProductWithPrices(ProductResponse):
     """商品信息 + 价格历史（用于详情页展示）"""
     price_snapshots: list[PriceSnapshotResponse] = []
+
+
+class CategoryAnalyzeRequest(BaseModel):
+    """启动类目评论分析的请求体"""
+    category: str
+
+
+class CategoryAnalyzeResponse(BaseModel):
+    """启动类目评论分析的响应体"""
+    job_id: str
+    message: str
+    total_products: int
+
+
+class CategoryAnalysisResponse(BaseModel):
+    """类目评论聚合分析响应体"""
+    status: str
+    message: str
+    category: str
+    product_count: int
+    review_count: int
+    reviews: list[dict]
+    analysis: dict
+    intercepted: bool

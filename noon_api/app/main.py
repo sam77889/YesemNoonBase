@@ -12,6 +12,7 @@ from app.models.database import init_db
 from app.api.webhook import router as webhook_router
 from app.api.products import router as products_router
 from app.api.tasks import router as tasks_router
+from app.api.reviews import router as reviews_router
 
 # ── 日志配置 ──
 logging.basicConfig(
@@ -61,6 +62,7 @@ app.add_middleware(
 app.include_router(webhook_router)
 app.include_router(products_router)
 app.include_router(tasks_router)
+app.include_router(reviews_router)
 
 
 # ── 根路径 & 健康检查 ──

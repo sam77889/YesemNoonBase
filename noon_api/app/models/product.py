@@ -33,9 +33,36 @@ class TrackedProduct(Base):
 
     # ── 关联：一个商品有多个价格快照 ──
     price_snapshots = relationship("PriceSnapshot", back_populates="product", lazy="selectin")
+    # ── 关联：一个商品有多条评论 ──
+    reviews = relationship("ProductReview", back_populates="product", lazy="selectin")
 
     def __repr__(self):
         return f"<TrackedProduct sku={self.sku} title={self.title[:30]}>"
+
+
+class ProductReview(Base):
+    """
+    商品评论持久化表
+    用于类目级评论深度分析的背景任务聚合
+    """
+    __tablename__ = "product_reviews"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sku = Column(String(50), ForeignKey("tracked_products.sku"), nullable=False, index=True, comment="关联商品 SKU")
+    rating = Column(Integer, nullable=False, comment="评分 1-5")
+    title = Column(Text, nullable=True, comment="评论标题")
+    body = Column(Text, nullable=True, comment="评论正文")
+    author = Column(String(200), nullable=True, comment="评论作者")
+    helpful_count = Column(Integer, default=0, comment="有用票数")
+    verified = Column(Boolean, default=False, comment="是否 Verified Purchase")
+    review_created_at = Column(DateTime, nullable=True, comment="评论原始创建时间")
+    fetched_at = Column(DateTime, default=datetime.utcnow, comment="评论抓取时间")
+    raw_data = Column(JSON, nullable=True, comment="原始 JSON-LD 片段")
+
+    product = relationship("TrackedProduct", back_populates="reviews")
+
+    def __repr__(self):
+        return f"<ProductReview sku={self.sku} rating={self.rating}>"
 
 
 class PriceSnapshot(Base):

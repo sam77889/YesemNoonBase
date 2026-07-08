@@ -381,30 +381,62 @@ def _generate_summary(
     return "".join(parts)
 
 
-async def fetch_product_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
-    """用 curl_cffi firefox 指纹抓商品页，从 JSON-LD 提取评论并深度分析。
+def _get_translator() -> GoogleTranslator:
+    return GoogleTranslator(source='auto', target='zh-CN')
 
-    noon 评论 API (_svc/reviews-api) 受 Akamai 强防护（需 _abck cookie，JS 生成），
-    Playwright 无头被 508、curl_cffi 直调被 508、ScraperAPI 套餐不支持 premium。
-    改为从商品页 SSR 的 JSON-LD review 数组提取（含 Top 评论，通常 3-5 条）。
+
+def _translate_word(word: str, translator: GoogleTranslator) -> str:
+    """优先使用本地词典，失败再调用 Google 翻译。"""
+    zh = _TRANSLATION_DICT.get(word)
+    if zh:
+        return zh
+    try:
+        return translator.translate(word) or word
+    except Exception:
+        return word
+
+
+def _translate_reviews(reviews: List[Dict[str, Any]]) -> None:
+    """把评论标题和正文翻译为中文（原地修改）。"""
+    if not reviews:
+        return
+    translator = _get_translator()
+    for r in reviews:
+        if r.get("title"):
+            r["title"] = _translate_word(r["title"], translator)
+        if r.get("body"):
+            r["body"] = _translate_word(r["body"], translator)
+
+
+def _translate_analysis(analysis: Dict[str, Any]) -> None:
+    """把分析结果中的关键词翻译为中文（原地修改）。"""
+    translator = _get_translator()
+    for kw_list in [analysis.get("top_keywords", []),
+                    analysis.get("pros_keywords", []),
+                    analysis.get("cons_keywords", [])]:
+        for kw in kw_list:
+            word = kw.get("word", "")
+            kw["word"] = _translate_word(word, translator)
+
+
+async def _fetch_raw_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
+    """用 curl_cffi firefox 指纹抓商品页，从 JSON-LD 提取原始英文评论。
 
     返回结构：
     {
         "status": "success" | "intercepted" | "empty" | "error",
         "message": "...",
         "reviews": [...],
-        "analysis": {...},
         "count": int,
         "intercepted": bool,
     }
     """
-    logger.info(f"[Reviews] curl_cffi 抓取商品页评论, SKU: {sku}")
+    logger.info(f"[Reviews] curl_cffi 抓取商品页原始评论, SKU: {sku}")
 
     result: Dict[str, Any] = {
         "status": "error",
         "message": "未知错误",
         "reviews": [],
-        "analysis": analyze_reviews([]),
         "count": 0,
         "intercepted": False,
     }
@@ -461,6 +493,9 @@ async def fetch_product_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
             }
             reviews.append(_normalize_review(flat))
 
+        if limit and limit > 0:
+            reviews = reviews[:limit]
+
         if not reviews:
             result["status"] = "empty"
             result["message"] = "该商品暂无评论（商品页 JSON-LD 无 review 数据）。"
@@ -472,36 +507,6 @@ async def fetch_product_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
             f"成功提取 {len(reviews)} 条评论（来自商品页 JSON-LD Top 评论，"
             f"完整评论受 Akamai 防护限制）。"
         )
-        result["analysis"] = analyze_reviews(reviews)
-        
-        # 翻译关键字和评论内容
-        try:
-            translator = GoogleTranslator(source='auto', target='zh-CN')
-            
-            # 翻译评论内容
-            for r in reviews:
-                if r.get("title"):
-                    r["title"] = translator.translate(r["title"])
-                if r.get("body"):
-                    r["body"] = translator.translate(r["body"])
-                    
-            # 翻译分析中的关键词
-            for kw_list in [result["analysis"].get("top_keywords", []),
-                            result["analysis"].get("pros_keywords", []),
-                            result["analysis"].get("cons_keywords", [])]:
-                for kw in kw_list:
-                    word = kw.get("word", "")
-                    zh_word = _TRANSLATION_DICT.get(word)
-                    if not zh_word:
-                        try:
-                            zh_word = translator.translate(word)
-                        except:
-                            zh_word = word
-                    kw["word"] = zh_word or word
-                    
-        except Exception as e:
-            logger.error(f"[Reviews] Translation failed: {e}")
-
         result["reviews"] = reviews
         result["count"] = len(reviews)
         logger.info(f"[Reviews] 提取到 {len(reviews)} 条评论")
@@ -509,5 +514,38 @@ async def fetch_product_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
     except Exception as e:
         result["message"] = f"抓取异常: {str(e)}"
         logger.error(f"[Reviews] {result['message']}")
+
+    return result
+
+
+async def fetch_product_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
+    """用 curl_cffi firefox 指纹抓商品页，从 JSON-LD 提取评论并深度分析。
+
+    noon 评论 API (_svc/reviews-api) 受 Akamai 强防护（需 _abck cookie，JS 生成），
+    Playwright 无头被 508、curl_cffi 直调被 508、ScraperAPI 套餐不支持 premium。
+    改为从商品页 SSR 的 JSON-LD review 数组提取（含 Top 评论，通常 3-5 条）。
+
+    返回结构：
+    {
+        "status": "success" | "intercepted" | "empty" | "error",
+        "message": "...",
+        "reviews": [...],
+        "analysis": {...},
+        "count": int,
+        "intercepted": bool,
+    }
+    """
+    result = await _fetch_raw_reviews(sku, limit=limit)
+    if result["status"] != "success" or not result["reviews"]:
+        result["analysis"] = analyze_reviews([])
+        return result
+
+    result["analysis"] = analyze_reviews(result["reviews"])
+
+    try:
+        _translate_reviews(result["reviews"])
+        _translate_analysis(result["analysis"])
+    except Exception as e:
+        logger.error(f"[Reviews] Translation failed: {e}")
 
     return result
