@@ -698,7 +698,7 @@ export default function App() {
                         type="text" 
                         className="input" 
                         placeholder="输入商品关键词进行竞速抓取 (如 massage gun)..." 
-                        style={{ paddingLeft: '3rem', paddingRight: '1rem', paddingTop: '1rem', paddingBottom: '1rem', fontSize: '1.1rem', borderRadius: '16px' }}
+                        style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         disabled={scraping || waitingForLog}
@@ -731,7 +731,7 @@ export default function App() {
                       ]}
                     />
 
-                    <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap' }}>
+                    <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ height: '54px', padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
                       {(scraping || waitingForLog) ? <RefreshCw className="spin" size={20} /> : <><Play size={20} /> 执行抓取</>}
                       {waitingForLog && <span style={{marginLeft: '0.5rem'}}>引擎启动中...</span>}
                     </button>
@@ -788,7 +788,7 @@ export default function App() {
                         type="text"
                         className="input"
                         placeholder="输入商品关键词（如 massage gun）直连抓取..."
-                        style={{ paddingLeft: '3rem', paddingRight: '1rem', paddingTop: '1rem', paddingBottom: '1rem', fontSize: '1.1rem', borderRadius: '16px' }}
+                        style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
                         value={fetcherQuery}
                         onChange={(e) => setFetcherQuery(e.target.value)}
                         disabled={scraping || waitingForLog}
@@ -809,7 +809,7 @@ export default function App() {
                       ]}
                     />
 
-                    <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap' }}>
+                    <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ height: '54px', padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
                       {(scraping || waitingForLog) ? <RefreshCw className="spin" size={20} /> : <><Zap size={20} /> 直连抓取</>}
                       {waitingForLog && <span style={{marginLeft: '0.5rem'}}>引擎启动中...</span>}
                     </button>

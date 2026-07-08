@@ -666,7 +666,7 @@ export function ReviewAnalysisPage({ initialSku, onExecutionUpdate }: ReviewAnal
               type="text"
               className="input"
               placeholder="输入 SKU (如 N12345678A)..."
-              style={{ paddingLeft: '3rem', paddingRight: '1rem', paddingTop: '0.85rem', paddingBottom: '0.85rem', fontSize: '1rem', borderRadius: '12px' }}
+              style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
               value={skuInput}
               onChange={(e) => setSkuInput(e.target.value)}
               disabled={loading}
@@ -676,7 +676,7 @@ export function ReviewAnalysisPage({ initialSku, onExecutionUpdate }: ReviewAnal
             type="submit" 
             className="btn" 
             disabled={loading || !skuInput.trim()}
-            style={{ padding: '0 2rem', borderRadius: '12px', whiteSpace: 'nowrap' }}
+            style={{ height: '54px', padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}
           >
             {loading ? <Loader2 size={20} className="spin" /> : '开始分析'}
           </button>
