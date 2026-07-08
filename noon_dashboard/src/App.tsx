@@ -82,6 +82,7 @@ export default function App() {
 
   // State for Review Analysis Page
   const [analysisSku, setAnalysisSku] = useState<string | undefined>(undefined);
+  const [autoRunAnalysis, setAutoRunAnalysis] = useState<boolean>(false);
 
   const fetchData = async () => {
     try {
@@ -950,7 +951,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <ReviewAnalysisPage initialSku={analysisSku} onExecutionUpdate={handleExecutionUpdate} />
+              <ReviewAnalysisPage initialSku={analysisSku} autoRun={autoRunAnalysis} onAutoRunConsumed={() => setAutoRunAnalysis(false)} onExecutionUpdate={handleExecutionUpdate} />
             </motion.div>
           )}
 

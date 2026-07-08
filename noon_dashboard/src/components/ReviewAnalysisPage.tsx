@@ -11,6 +11,8 @@ import type { ReviewResponse } from '../api';
 
 interface ReviewAnalysisPageProps {
   initialSku?: string;
+  autoRun?: boolean;
+  onAutoRunConsumed?: () => void;
   onExecutionUpdate?: (id: string, title: string, source: 'analysis', status: 'running'|'success'|'error', progress: number, logs: string[]) => void;
 }
 
@@ -38,24 +40,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 }
 
-export function ReviewAnalysisPage({ initialSku, onExecutionUpdate }: ReviewAnalysisPageProps) {
+export function ReviewAnalysisPage({ initialSku, autoRun, onAutoRunConsumed, onExecutionUpdate }: ReviewAnalysisPageProps) {
   const [skuInput, setSkuInput] = useState(initialSku || '');
-  const [analyzedSku, setAnalyzedSku] = useState('');
   const [data, setData] = useState<ReviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const loadingLogsInterval = useRef<any>(null);
 
   useEffect(() => {
-    if (initialSku && initialSku !== analyzedSku) {
-      setSkuInput(initialSku);
+    if (initialSku) setSkuInput(initialSku);
+    if (autoRun && initialSku) {
       handleAnalyze(initialSku);
+      if (onAutoRunConsumed) onAutoRunConsumed();
     }
-  }, [initialSku]);
+  }, [initialSku, autoRun]);
 
   const handleAnalyze = async (targetSku: string) => {
     if (!targetSku.trim()) return;
     setLoading(true);
-    setAnalyzedSku(targetSku);
+    
     setData(null);
     
     const execId = `analysis-${Date.now()}`;
