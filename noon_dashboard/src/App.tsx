@@ -38,7 +38,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'scraper' | 'database' | 'fetcher' | 'analysis' | 'logs'>('overview');
   const [executionBlocks, setExecutionBlocks] = useState<any[]>([]);
 
-  const handleExecutionUpdate = (id: string, title: string, source: 'analysis', status: 'running' | 'success' | 'error', progress: number, logs: string[]) => {
+  const handleExecutionUpdate = (id: string, title: string, source: 'analysis' | 'scraper' | 'fetcher', status: 'running' | 'success' | 'error', progress: number, logs: string[]) => {
     setExecutionBlocks(prev => {
       const newBlocks = [...prev];
       const idx = newBlocks.findIndex(b => b.id === id);
@@ -114,7 +114,7 @@ export default function App() {
     setScraping(true);
     setWaitingForLog(true);
     try {
-      await api.post('/tasks/search', {
+      const res = await api.post('/tasks/search', {
         task_type: 'SEARCH',
         query,
         country: 'uae',
@@ -122,6 +122,28 @@ export default function App() {
         pages,
         provider
       });
+      
+      const jobId = res.data.job_id;
+      if (jobId) {
+        const initialLog = provider === 'fetcher' 
+          ? '> 建立网络请求上下文...\n> 注入浏览器特征指纹，规避 Akamai Bot Manager...' 
+          : '> 正在向代理池下发任务，分配高匿节点...';
+        
+        const newTask: any = {
+          job_id: jobId,
+          query,
+          status: 'PROCESSING',
+          error_message: initialLog,
+          task_type: 'SEARCH',
+          result_count: 0,
+          created_at: new Date().toISOString()
+        };
+        setTasks(prev => [newTask, ...prev]);
+        
+        const title = `${provider === 'fetcher' ? '本地直搜' : '付费搜查'} - ${query}`;
+        handleExecutionUpdate(jobId, title, provider === 'fetcher' ? 'fetcher' : 'scraper', 'running', 10, initialLog.split('\n'));
+      }
+      
       fetchData();
     } catch (error) {
       console.error('Scraping failed:', error);

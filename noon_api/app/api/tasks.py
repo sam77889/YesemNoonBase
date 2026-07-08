@@ -28,12 +28,14 @@ async def create_search_task(
     """
     创建任务并放入后台执行
     """
-    job_id = f"scraperapi-{task_data.query}-{logger.name[-4:]}" # Simplified job ID generator for fast creation, actually let dispatcher generate it?
-    # Better: let dispatcher handle it but we want to return something fast.
+    from app.config import get_settings
+    from datetime import datetime
+    provider_val = (task_data.provider or get_settings().SCRAPER_PROVIDER).lower()
+    job_id = f"{provider_val}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{task_data.query}"
     
-    async def run_in_background(query: str, country: str, language: str, pages: int, provider: str | None):
+    async def run_in_background(query: str, country: str, language: str, pages: int, provider: str | None, jid: str):
         async with async_session_maker() as bg_db:
-            await run_search_scrape(bg_db, query, country, language, pages, provider=provider)
+            await run_search_scrape(bg_db, query, country, language, pages, provider=provider, job_id=jid)
 
     background_tasks.add_task(
         run_in_background,
@@ -41,10 +43,11 @@ async def create_search_task(
         task_data.country,
         task_data.language,
         task_data.pages,
-        task_data.provider
+        task_data.provider,
+        job_id
     )
     
-    return {"message": "Scraping task started in background", "query": task_data.query}
+    return {"message": "Scraping task started in background", "query": task_data.query, "job_id": job_id}
 
 
 @router.get("/", response_model=list[TaskResponse])

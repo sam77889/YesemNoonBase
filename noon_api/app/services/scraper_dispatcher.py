@@ -61,6 +61,7 @@ async def run_search_scrape(
     language: str = "en",
     pages: int = 1,
     provider: str | None = None,
+    job_id: str | None = None,
 ) -> dict:
     """
     执行一次完整的搜索抓取流程（端到端），支持深潜抓取多页
@@ -85,7 +86,7 @@ async def run_search_scrape(
         country=country,
         language=language,
         status="PROCESSING",
-        job_id=f"{provider}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{query}",
+        job_id=job_id or f"{provider}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{query}",
     )
     db.add(task)
     await db.flush()
