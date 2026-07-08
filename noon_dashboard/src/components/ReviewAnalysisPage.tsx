@@ -11,7 +11,7 @@ import type { ReviewResponse } from '../api';
 
 interface ReviewAnalysisPageProps {
   initialSku?: string;
-  addLog?: (source: string, type: 'info' | 'success' | 'warning' | 'error', message: string) => void;
+  onExecutionUpdate?: (id: string, title: string, source: 'analysis', status: 'running'|'success'|'error', progress: number, logs: string[]) => void;
 }
 
 const SENTIMENT_COLORS = {
@@ -38,12 +38,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 }
 
-export function ReviewAnalysisPage({ initialSku, addLog }: ReviewAnalysisPageProps) {
+export function ReviewAnalysisPage({ initialSku, onExecutionUpdate }: ReviewAnalysisPageProps) {
   const [skuInput, setSkuInput] = useState(initialSku || '');
   const [analyzedSku, setAnalyzedSku] = useState('');
   const [data, setData] = useState<ReviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [simulatedLogs, setSimulatedLogs] = useState<string[]>([]);
   const loadingLogsInterval = useRef<any>(null);
 
   useEffect(() => {
@@ -59,9 +58,23 @@ export function ReviewAnalysisPage({ initialSku, addLog }: ReviewAnalysisPagePro
     setAnalyzedSku(targetSku);
     setData(null);
     
-    const initialMsg = `> 初始化针对 SKU [${targetSku}] 的深度分析任务...`;
-    setSimulatedLogs([initialMsg]);
-    if (addLog) addLog('DeepAnalysis', 'info', initialMsg);
+    const execId = `analysis-${Date.now()}`;
+    const title = `深度分析 - SKU: ${targetSku}`;
+    let currentLogs: string[] = [];
+    let currentProgress = 0;
+    
+    const updateGlobal = (msg: string, isEnd = false, err = false) => {
+      currentLogs.push(msg);
+      if (isEnd) currentProgress = 100;
+      else currentProgress = Math.min(95, currentProgress + 10);
+      
+      const status = isEnd ? (err ? 'error' : 'success') : 'running';
+      if (onExecutionUpdate) {
+        onExecutionUpdate(execId, title, 'analysis', status, currentProgress, [...currentLogs]);
+      }
+    };
+
+    updateGlobal(`> 初始化针对 SKU [${targetSku}] 的深度分析任务...`);
 
     const logSequence = [
       `> 建立网络请求上下文...`,
@@ -80,9 +93,7 @@ export function ReviewAnalysisPage({ initialSku, addLog }: ReviewAnalysisPagePro
     let step = 0;
     loadingLogsInterval.current = setInterval(() => {
       if (step < logSequence.length) {
-        const msg = logSequence[step];
-        setSimulatedLogs(prev => [...prev, msg]);
-        if (addLog) addLog('DeepAnalysis', 'info', msg);
+        updateGlobal(logSequence[step]);
         step++;
       }
     }, 600);
@@ -90,15 +101,11 @@ export function ReviewAnalysisPage({ initialSku, addLog }: ReviewAnalysisPagePro
     try {
       const res = await api.get<ReviewResponse>(`/products/${encodeURIComponent(targetSku)}/reviews`);
       clearInterval(loadingLogsInterval.current);
-      const successMsg = `> 分析完成！成功获取并清洗全部数据。`;
-      setSimulatedLogs(prev => [...prev, successMsg]);
-      if (addLog) addLog('DeepAnalysis', 'success', successMsg);
+      updateGlobal(`> 分析完成！成功获取并清洗全部数据。`, true, false);
       setData(res.data);
     } catch (err: any) {
       clearInterval(loadingLogsInterval.current);
-      const errMsg = `> [致命错误] 分析任务中断: ${err?.response?.data?.detail || err.message}`;
-      setSimulatedLogs(prev => [...prev, errMsg]);
-      if (addLog) addLog('DeepAnalysis', 'error', errMsg);
+      updateGlobal(`> [致命错误] 分析任务中断: ${err?.response?.data?.detail || err.message}`, true, true);
       console.error(err);
       setData({
         status: 'error',
@@ -126,41 +133,20 @@ export function ReviewAnalysisPage({ initialSku, addLog }: ReviewAnalysisPagePro
             <Loader2 size={24} className="spin" />
             <span style={{ fontWeight: 500 }}>深度分析进行中...</span>
           </div>
-          <div 
-            style={{ 
-              background: '#0a0c10', 
-              borderRadius: '12px', 
-              padding: '1.5rem',
-              fontFamily: '"Fira Code", Consolas, monospace',
-              fontSize: '0.85rem',
-              color: '#34d399',
-              border: '1px solid #1f2937',
-              boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5)',
-              minHeight: '200px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem'
-            }}
-          >
-            {simulatedLogs.map((log, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, x: -10 }} 
-                animate={{ opacity: 1, x: 0 }}
-                style={{ 
-                  color: log.includes('错误') ? '#f87171' : (log.includes('完成') ? '#60a5fa' : '#34d399'),
-                  opacity: i === simulatedLogs.length - 1 ? 1 : 0.7
-                }}
-              >
-                {log}
-              </motion.div>
-            ))}
-            <motion.div
-              animate={{ opacity: [1, 0] }}
-              transition={{ repeat: Infinity, duration: 0.8 }}
-              style={{ width: '8px', height: '15px', background: '#34d399', marginTop: '0.25rem' }}
-            />
-          </div>
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+    <span style={{ color: 'var(--primary)' }}>分析任务执行中...</span>
+    <span style={{ color: 'var(--text-muted)' }}>日志已重定向至系统日志面板</span>
+  </div>
+  <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+    <motion.div
+      initial={{ width: '0%' }}
+      animate={{ width: '80%' }}
+      transition={{ duration: 10, ease: 'linear' }}
+      style={{ height: '100%', background: 'var(--primary)' }}
+    />
+  </div>
+</div>
         </div>
       );
     }

@@ -3,7 +3,7 @@ import { Activity, Search, Package, TrendingUp, RefreshCw, X, BarChart3, LayoutD
 import { DatabaseTable } from './components/DatabaseTable';
 import { ReviewAnalysisPage } from './components/ReviewAnalysisPage';
 import { SystemLogsPage } from './components/SystemLogsPage';
-import type { LogEntry } from './components/SystemLogsPage';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,45 +13,7 @@ import {
 import { api } from './api';
 import type { Product, Stats, Task } from './api';
 
-// --- Terminal Typing Effect Component ---
-const TerminalLog = ({ text }: { text: string }) => {
-  const [displayed, setDisplayed] = useState('');
-  
-  useEffect(() => {
-    if (!text) return;
-    
-    // Only type the new part to preserve the illusion of a continuous stream
-    if (text.startsWith(displayed)) {
-      const remaining = text.slice(displayed.length);
-      if (remaining.length === 0) return;
-      
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i < remaining.length) {
-          setDisplayed(prev => prev + remaining.charAt(i));
-          i++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 15); // Fast typing speed (15ms per char)
-      return () => clearInterval(interval);
-    } else {
-      // Fallback if the text completely changed
-      setDisplayed(text);
-    }
-  }, [text, displayed]);
 
-  return (
-    <div style={{
-      padding: '1rem', background: '#0a0c10', borderRadius: '8px',
-      fontFamily: '"Fira Code", Consolas, monospace', fontSize: '0.85rem', color: '#34d399', whiteSpace: 'pre-wrap',
-      border: '1px solid #1f2937', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
-      lineHeight: '1.5'
-    }}>
-      {displayed}
-    </div>
-  );
-};
 const parseScrapedAt = (scrapedAt: string) => new Date(scrapedAt.endsWith('Z') ? scrapedAt : scrapedAt + 'Z');
 
 // Custom Tooltip for dark mode
@@ -73,11 +35,27 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'scraper' | 'database' | 'fetcher' | 'analysis' | 'logs'>('overview');
-  const [globalLogs, setGlobalLogs] = useState<LogEntry[]>([]);
-  
-  const addLog = (source: string, type: LogEntry['type'], message: string) => {
-    setGlobalLogs(prev => [...prev, { id: Math.random().toString(36).substring(7), timestamp: new Date(), source, message, type }]);
+  const [executionBlocks, setExecutionBlocks] = useState<any[]>([]);
+
+  const handleExecutionUpdate = (id: string, title: string, source: 'analysis', status: 'running' | 'success' | 'error', progress: number, logs: string[]) => {
+    setExecutionBlocks(prev => {
+      const newBlocks = [...prev];
+      const idx = newBlocks.findIndex(b => b.id === id);
+      const parsedLogs = logs.map((msg, i) => ({
+        id: `${id}-log-${i}`,
+        timestamp: new Date(),
+        message: msg,
+        type: msg.includes('错误') ? 'error' : msg.includes('完成') ? 'success' : 'info'
+      }));
+      if (idx === -1) {
+        newBlocks.unshift({ id, title, source, status, timestamp: new Date(), logs: parsedLogs, progress });
+      } else {
+        newBlocks[idx] = { ...newBlocks[idx], status, logs: parsedLogs, progress };
+      }
+      return newBlocks;
+    });
   };
+
   
   const [stats, setStats] = useState<Stats | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -181,6 +159,53 @@ export default function App() {
     if (waitingForLog && activeTask) {
       setWaitingForLog(false);
     }
+    
+    // Parse backend tasks into execution blocks
+    setExecutionBlocks(prevBlocks => {
+      const newBlocks = [...prevBlocks];
+      let changed = false;
+
+      tasks.forEach(task => {
+        const blockIndex = newBlocks.findIndex(b => b.id === task.job_id);
+        const source = task.job_id?.startsWith('fetcher-') ? 'fetcher' : 'scraper';
+        const title = `${source === 'fetcher' ? '本地直搜' : '付费搜查'} - ${task.query}`;
+        
+        let logs: any[] = [];
+        if (task.error_message) {
+          logs = task.error_message.split('\n').filter(Boolean).map((msg, i) => ({
+            id: `log-${task.job_id}-${i}`,
+            timestamp: new Date(),
+            message: msg,
+            type: msg.includes('Error') || msg.includes('Failed') ? 'error' : 'info'
+          }));
+        }
+
+        const status = task.status === 'SUCCESS' ? 'success' : task.status === 'FAILED' ? 'error' : 'running';
+        const progress = status === 'success' ? 100 : (status === 'error' ? 100 : 50);
+
+        if (blockIndex === -1) {
+          if (task.job_id) {
+            newBlocks.unshift({
+              id: task.job_id,
+              title,
+              source,
+              status,
+              timestamp: new Date(),
+              logs,
+              progress
+            });
+            changed = true;
+          }
+        } else {
+          const existing = newBlocks[blockIndex];
+          if (existing.status !== status || existing.logs.length !== logs.length) {
+            newBlocks[blockIndex] = { ...existing, status, logs, progress };
+            changed = true;
+          }
+        }
+      });
+      return changed ? newBlocks : prevBlocks;
+    });
   }, [tasks, waitingForLog]);
 
   const openPriceTrend = async (sku: string) => {
@@ -712,39 +737,32 @@ export default function App() {
                   </form>
                 </div>
 
-                <div ref={terminalRef} className="glass-panel bento-col-12" style={{ padding: '1.5rem', maxHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ marginBottom: '1.5rem' }}>实时任务日志终端</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+                <div className="glass-panel bento-col-12" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ marginBottom: '1.5rem' }}>当前任务状态</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <AnimatePresence>
-                      {tasks.filter(t => !t.job_id?.startsWith('fetcher-')).map((task, i) => (
+                      {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').map((task) => (
                         <motion.div 
                           key={task.job_id}
-                          initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, margin: 0, padding: 0 }}
                           style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}
                         >
                           <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{task.query}</span>
-                            <span style={{ 
-                              padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              background: task.status === 'SUCCESS' ? 'rgba(52, 211, 153, 0.2)' : task.status === 'FAILED' ? 'rgba(248, 113, 113, 0.2)' : 'rgba(251, 191, 36, 0.2)',
-                              color: task.status === 'SUCCESS' ? 'var(--success)' : task.status === 'FAILED' ? 'var(--danger)' : '#fbbf24'
-                            }}>
-                              {task.status}
-                            </span>
+                            <span style={{ fontWeight: 600, fontSize: '1rem' }}>正在抓取: {task.query}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>请前往「系统日志」查看详细输出</span>
                           </div>
-                          
-                          {task.error_message ? (
-                            <TerminalLog text={task.error_message} />
-                          ) : (
-                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                              入库商品数: {task.result_count !== null ? task.result_count : '等待中...'}
-                            </div>
-                          )}
+                          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <motion.div
+                              animate={{ width: ['0%', '100%'] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                              style={{ height: '100%', background: 'var(--primary)' }}
+                            />
+                          </div>
                         </motion.div>
                       ))}
                     </AnimatePresence>
-                    {tasks.filter(t => !t.job_id?.startsWith('fetcher-')).length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>暂无任务日志</div>
+                    {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无执行中的任务</div>
                     )}
                   </div>
                 </div>
@@ -797,39 +815,32 @@ export default function App() {
                   </form>
                 </div>
 
-                <div ref={fetcherTerminalRef} className="glass-panel bento-col-12" style={{ padding: '1.5rem', maxHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ marginBottom: '1.5rem' }}>本地直搜任务日志</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+                <div className="glass-panel bento-col-12" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ marginBottom: '1.5rem' }}>当前任务状态</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <AnimatePresence>
-                      {tasks.filter(t => t.job_id?.startsWith('fetcher-')).map((task, i) => (
+                      {tasks.filter(t => t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').map((task) => (
                         <motion.div
                           key={task.job_id}
-                          initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, margin: 0, padding: 0 }}
                           style={{ background: 'rgba(0,0,0,0.3)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}
                         >
                           <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>🦊 {task.query}</span>
-                            <span style={{
-                              padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                              background: task.status === 'SUCCESS' ? 'rgba(52, 211, 153, 0.2)' : task.status === 'FAILED' ? 'rgba(248, 113, 113, 0.2)' : 'rgba(251, 191, 36, 0.2)',
-                              color: task.status === 'SUCCESS' ? 'var(--success)' : task.status === 'FAILED' ? 'var(--danger)' : '#fbbf24'
-                            }}>
-                              {task.status}
-                            </span>
+                            <span style={{ fontWeight: 600, fontSize: '1rem' }}>正在抓取: {task.query}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>请前往「系统日志」查看详细输出</span>
                           </div>
-
-                          {task.error_message ? (
-                            <TerminalLog text={task.error_message} />
-                          ) : (
-                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                              入库商品数: {task.result_count !== null ? task.result_count : '等待中...'}
-                            </div>
-                          )}
+                          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <motion.div
+                              animate={{ width: ['0%', '100%'] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                              style={{ height: '100%', background: '#f59e0b' }}
+                            />
+                          </div>
                         </motion.div>
                       ))}
                     </AnimatePresence>
-                    {tasks.filter(t => t.job_id?.startsWith('fetcher-')).length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>暂无本地直搜任务日志</div>
+                    {tasks.filter(t => t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无执行中的直连任务</div>
                     )}
                   </div>
                 </div>
@@ -900,7 +911,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <ReviewAnalysisPage initialSku={analysisSku} addLog={addLog} />
+              <ReviewAnalysisPage initialSku={analysisSku} onExecutionUpdate={handleExecutionUpdate} />
             </motion.div>
           )}
 
@@ -913,7 +924,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               style={{ height: 'calc(100vh - 4rem)' }}
             >
-              <SystemLogsPage logs={globalLogs} onClear={() => setGlobalLogs([])} />
+              <SystemLogsPage blocks={executionBlocks} onClear={() => setExecutionBlocks([])} />
             </motion.div>
           )}
 
