@@ -44,14 +44,7 @@ export function SystemLogsPage({ blocks, onClear }: SystemLogsPageProps) {
     }
   };
 
-  const getLogOpacity = (index: number, total: number) => {
-    const diff = total - 1 - index;
-    if (diff === 0) return 1;
-    if (diff <= 2) return 0.85;
-    if (diff <= 5) return 0.6;
-    if (diff <= 10) return 0.4;
-    return 0.25;
-  };
+
 
   const TerminalBlock = ({ block }: { block: ExecutionBlock }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -101,19 +94,18 @@ export function SystemLogsPage({ blocks, onClear }: SystemLogsPageProps) {
             <div style={{ color: '#6b7280', fontStyle: 'italic', padding: '1rem' }}>暂无日志记录...</div>
           ) : (
             <>
-              {block.logs.map((log, i) => (
-                <motion.div 
+              {block.logs.map((log) => (
+                <div 
                   key={log.id}
-                  initial={{ opacity: 0, x: -10 }} 
-                  animate={{ opacity: getLogOpacity(i, block.logs.length), x: 0 }}
                   style={{ 
                     color: getLogColor(log.type),
                     lineHeight: '1.5',
-                    wordBreak: 'break-all'
+                    wordBreak: 'break-all',
+                    opacity: 0.95
                   }}
                 >
                   {`> ${log.message}`}
-                </motion.div>
+                </div>
               ))}
               {block.status === 'running' && (
                 <motion.div
