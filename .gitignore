@@ -50,7 +50,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# IDEs
+# IDEs and Tools
 .vscode/
 .idea/
 *.suo
@@ -58,3 +58,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+.mimocode/
+.codebuddy/
+cookies*
