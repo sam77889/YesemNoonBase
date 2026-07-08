@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Activity, Search, Package, TrendingUp, RefreshCw, X, BarChart3, LayoutDashboard, Terminal, Database, Play, Zap, MessageSquare } from 'lucide-react';
 import { DatabaseTable } from './components/DatabaseTable';
+import { CustomSelect } from './components/CustomSelect';
 import { ReviewAnalysisPage } from './components/ReviewAnalysisPage';
 import { SystemLogsPage } from './components/SystemLogsPage';
 
@@ -704,31 +705,31 @@ export default function App() {
                       />
                     </div>
                     
-                    <select 
-                      className="input"
+                    <CustomSelect
                       value={scrapePages}
-                      onChange={(e) => setScrapePages(Number(e.target.value))}
+                      onChange={(val) => setScrapePages(Number(val))}
                       disabled={scraping || waitingForLog}
                       title="抓取数量（每批 200 件）"
-                      style={{ width: '130px', borderRadius: '16px', background: 'var(--panel-bg)', color: 'white', padding: '0 1rem', cursor: 'pointer' }}
-                    >
-                      <option value={1}>200 件</option>
-                      <option value={3}>600 件</option>
-                      <option value={5}>1000 件</option>
-                      <option value={10}>2000 件</option>
-                    </select>
+                      style={{ width: '130px', borderRadius: '16px', height: '54px' }}
+                      options={[
+                        { label: '200 件', value: 1 },
+                        { label: '600 件', value: 3 },
+                        { label: '1000 件', value: 5 },
+                        { label: '2000 件', value: 10 },
+                      ]}
+                    />
 
-                    <select
-                      className="input"
+                    <CustomSelect
                       value={scrapeProvider}
-                      onChange={(e) => setScrapeProvider(e.target.value as 'scraperapi' | 'oxylabs')}
+                      onChange={(val) => setScrapeProvider(val as 'scraperapi' | 'oxylabs')}
                       disabled={scraping || waitingForLog}
                       title="选择付费抓取引擎：ScraperAPI / Oxylabs（本地直连请用左侧「本地直连」页面）"
-                      style={{ width: '150px', borderRadius: '16px', background: 'var(--panel-bg)', color: 'white', padding: '0 1rem', cursor: 'pointer' }}
-                    >
-                      <option value="scraperapi"> ScraperAPI</option>
-                      <option value="oxylabs"> Oxylabs</option>
-                    </select>
+                      style={{ width: '160px', borderRadius: '16px', height: '54px' }}
+                      options={[
+                        { label: 'ScraperAPI', value: 'scraperapi' },
+                        { label: 'Oxylabs', value: 'oxylabs' },
+                      ]}
+                    />
 
                     <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap' }}>
                       {(scraping || waitingForLog) ? <RefreshCw className="spin" size={20} /> : <><Play size={20} /> 执行抓取</>}
@@ -794,19 +795,19 @@ export default function App() {
                       />
                     </div>
 
-                    <select
-                      className="input"
+                    <CustomSelect
                       value={fetcherPages}
-                      onChange={(e) => setFetcherPages(Number(e.target.value))}
+                      onChange={(val) => setFetcherPages(Number(val))}
                       disabled={scraping || waitingForLog}
                       title="抓取数量（每批 200 件）"
-                      style={{ width: '130px', borderRadius: '16px', background: 'var(--panel-bg)', color: 'white', padding: '0 1rem', cursor: 'pointer' }}
-                    >
-                      <option value={1}>200 件</option>
-                      <option value={3}>600 件</option>
-                      <option value={5}>1000 件</option>
-                      <option value={10}>2000 件</option>
-                    </select>
+                      style={{ width: '130px', borderRadius: '16px', height: '54px' }}
+                      options={[
+                        { label: '200 件', value: 1 },
+                        { label: '600 件', value: 3 },
+                        { label: '1000 件', value: 5 },
+                        { label: '2000 件', value: 10 },
+                      ]}
+                    />
 
                     <button type="submit" className="btn" disabled={scraping || waitingForLog} style={{ padding: '0 2rem', borderRadius: '16px', whiteSpace: 'nowrap' }}>
                       {(scraping || waitingForLog) ? <RefreshCw className="spin" size={20} /> : <><Zap size={20} /> 直连抓取</>}
