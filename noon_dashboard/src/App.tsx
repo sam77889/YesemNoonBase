@@ -752,6 +752,14 @@ export default function App() {
                             <span style={{ fontWeight: 600, fontSize: '1rem' }}>正在抓取: {task.query}</span>
                             <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>请前往「系统日志」查看详细输出</span>
                           </div>
+                          <div style={{ 
+                            background: '#0a0c10', padding: '0.75rem', borderRadius: '8px', 
+                            border: '1px solid #1f2937', marginBottom: '0.75rem',
+                            fontFamily: '"Fira Code", Consolas, monospace', fontSize: '0.85rem', color: '#34d399',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                          }}>
+                            {task.error_message ? `> ${task.error_message.split('\\n').filter(Boolean).pop()}` : '> 正在初始化爬虫引擎...'}
+                          </div>
                           <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                             <motion.div
                               animate={{ width: ['0%', '100%'] }}
@@ -829,6 +837,14 @@ export default function App() {
                           <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
                             <span style={{ fontWeight: 600, fontSize: '1rem' }}>正在抓取: {task.query}</span>
                             <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>请前往「系统日志」查看详细输出</span>
+                          </div>
+                          <div style={{ 
+                            background: '#0a0c10', padding: '0.75rem', borderRadius: '8px', 
+                            border: '1px solid #1f2937', marginBottom: '0.75rem',
+                            fontFamily: '"Fira Code", Consolas, monospace', fontSize: '0.85rem', color: '#f59e0b',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                          }}>
+                            {task.error_message ? `> ${task.error_message.split('\\n').filter(Boolean).pop()}` : '> 正在初始化直连任务...'}
                           </div>
                           <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                             <motion.div
