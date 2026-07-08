@@ -156,7 +156,7 @@ export default function App() {
 
   // 监听任务状态，如果有正在跑的任务，可以立即解除锁定
   useEffect(() => {
-    const activeTask = tasks.find(t => t.status === 'RUNNING');
+    const activeTask = tasks.find(t => (t.status === 'PROCESSING' || t.status === 'PENDING'));
     if (waitingForLog && activeTask) {
       setWaitingForLog(false);
     }
@@ -742,7 +742,7 @@ export default function App() {
                   <h3 style={{ marginBottom: '1.5rem' }}>当前任务状态</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <AnimatePresence>
-                      {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').map((task) => (
+                      {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && (t.status === 'PROCESSING' || t.status === 'PENDING')).map((task) => (
                         <motion.div 
                           key={task.job_id}
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, margin: 0, padding: 0 }}
@@ -770,7 +770,7 @@ export default function App() {
                         </motion.div>
                       ))}
                     </AnimatePresence>
-                    {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').length === 0 && (
+                    {tasks.filter(t => !t.job_id?.startsWith('fetcher-') && (t.status === 'PROCESSING' || t.status === 'PENDING')).length === 0 && (
                       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无执行中的任务</div>
                     )}
                   </div>
@@ -828,7 +828,7 @@ export default function App() {
                   <h3 style={{ marginBottom: '1.5rem' }}>当前任务状态</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <AnimatePresence>
-                      {tasks.filter(t => t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').map((task) => (
+                      {tasks.filter(t => t.job_id?.startsWith('fetcher-') && (t.status === 'PROCESSING' || t.status === 'PENDING')).map((task) => (
                         <motion.div
                           key={task.job_id}
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, margin: 0, padding: 0 }}
@@ -856,7 +856,7 @@ export default function App() {
                         </motion.div>
                       ))}
                     </AnimatePresence>
-                    {tasks.filter(t => t.job_id?.startsWith('fetcher-') && t.status === 'RUNNING').length === 0 && (
+                    {tasks.filter(t => t.job_id?.startsWith('fetcher-') && (t.status === 'PROCESSING' || t.status === 'PENDING')).length === 0 && (
                       <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无执行中的直连任务</div>
                     )}
                   </div>
