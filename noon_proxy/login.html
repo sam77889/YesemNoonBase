@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>一森数字科技 - 登录</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0c10;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #e2e8f0;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem;
+      padding: 2.5rem;
+      background: rgba(25, 28, 41, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #60a5fa;
+    }
+
+    .logo svg {
+      width: 32px;
+      height: 32px;
+      stroke: #60a5fa;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      background: rgba(10, 12, 16, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #f8fafc;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    input::placeholder {
+      color: #64748b;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.875rem;
+      padding: 0.25rem;
+    }
+
+    .toggle-password:hover {
+      color: #e2e8f0;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button[type="submit"]:hover {
+      opacity: 0.92;
+    }
+
+    button[type="submit"]:active {
+      transform: scale(0.99);
+    }
+
+    .error {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 10px;
+      color: #f87171;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 48 48" stroke-width="0" stroke="currentColor" style="width: 36px; height: 36px;">
+        <rect width="48" height="48" rx="10" fill="url(#logo-gradient)"/>
+        <path d="M16 24L24 16L32 24L24 32L16 24Z" fill="white" fill-opacity="0.9"/>
+        <path d="M20 24L24 20L28 24L24 28L20 24Z" fill="url(#logo-gradient)"/>
+        <defs>
+          <linearGradient id="logo-gradient" x1="0" y1="0" x2="48" y2="48">
+            <stop stop-color="#60a5fa"/>
+            <stop offset="1" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      一森数字科技
+    </div>
+    <p class="subtitle">智能数据洞察平台</p>
+
+    <form method="POST" action="/login" id="login-form">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" placeholder="请输入用户名" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="password">密码</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" name="password" placeholder="请输入密码" required>
+          <button type="button" class="toggle-password" id="toggle-password">显示</button>
+        </div>
+      </div>
+
+      <button type="submit">登录</button>
+      <div class="error" id="error-msg"></div>
+    </form>
+
+    <p class="footer">© 2026 一森数字科技 · 版权所有</p>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      const errorMsg = document.getElementById('error-msg');
+
+      if (error === '1') {
+        errorMsg.textContent = '用户名或密码错误';
+        errorMsg.classList.add('show');
+      } else if (error === 'rate') {
+        errorMsg.textContent = '登录尝试次数过多，请 15 分钟后再试';
+        errorMsg.classList.add('show');
+      }
+
+      const passwordInput = document.getElementById('password');
+      const toggleBtn = document.getElementById('toggle-password');
+      toggleBtn.addEventListener('click', function() {
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text';
+          toggleBtn.textContent = '隐藏';
+        } else {
+          passwordInput.type = 'password';
+          toggleBtn.textContent = '显示';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

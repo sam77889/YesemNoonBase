@@ -1,0 +1,33 @@
+# NOON 数据分析系统 - Python 依赖
+# 安装: pip install -r requirements.txt
+
+# ── Web 框架 ──
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+pydantic-settings==2.4.0
+
+# ── 数据库 ──
+sqlalchemy[asyncio]==2.0.32
+asyncpg==0.29.0
+aiosqlite==0.20.0          # 开发环境用 SQLite 替代 PostgreSQL
+
+# ── HTTP 客户端 (调用 Oxylabs API) ──
+httpx==0.27.0
+
+# ── 数据处理 ──
+pandas==2.2.2
+
+# ── 可视化仪表盘 ──
+streamlit>=1.30.0
+plotly>=5.18.0
+
+# ── 工具 ──
+python-dotenv==1.0.1
+beautifulsoup4>=4.12.0
+lxml>=5.0.0             # BeautifulSoup 解析后端
+
+# ── 本地直连爬虫（noon_scraper 模块，绕过 Akamai，无需付费 API）──
+curl_cffi>=0.15.0       # TLS 指纹模拟（firefox），绕过 Akamai Bot Manager
+
+# ── 评论抓取（Playwright 无头浏览器绕过 Akamai）──
+playwright>=1.40.0      # 商品评论页需要浏览器上下文生成 cookie 才能调用内部 reviews API

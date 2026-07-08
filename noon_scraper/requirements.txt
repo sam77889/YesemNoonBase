@@ -1,0 +1,6 @@
+# noon_scraper 模块依赖
+# 安装: pip install -r requirements.txt
+
+curl_cffi>=0.15.0      # TLS 指纹模拟（核心，绕过 Akamai）
+beautifulsoup4>=4.12.0  # HTML 解析
+lxml>=5.0.0             # BeautifulSoup 解析后端（比 html.parser 快）

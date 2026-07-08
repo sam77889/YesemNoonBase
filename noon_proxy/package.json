@@ -1,0 +1,23 @@
+{
+  "name": "noon-proxy",
+  "version": "1.0.0",
+  "description": "NOON Base - Cloudflare Tunnel auth proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["noon", "dashboard", "cloudflare", "proxy"],
+  "author": "san",
+  "license": "ISC",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cookie": "^0.6.0",
+    "cookie-signature": "^1.2.1",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.4.0",
+    "express-session": "^1.19.0",
+    "http-proxy": "^1.18.1",
+    "morgan": "^1.10.0"
+  }
+}
