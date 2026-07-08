@@ -691,13 +691,13 @@ export default function App() {
               
               <div className="bento-grid">
                 <div className="glass-panel bento-col-12" style={{ padding: '3rem', textAlign: 'center', background: 'rgba(25, 28, 41, 0.7)' }}>
-                  <form onSubmit={handleScrape} className="flex gap-4" style={{ maxWidth: '700px', margin: '0 auto' }}>
+                  <form onSubmit={handleScrape} className="flex gap-4" style={{ maxWidth: '100%', margin: '0 auto', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                       <Search size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                       <input 
                         type="text" 
                         className="input" 
-                        placeholder="输入商品关键词进行竞速抓取 (如 massage gun)..." 
+                        placeholder="输入竞速抓取关键词 (如 massage gun)..." 
                         style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -781,13 +781,13 @@ export default function App() {
 
               <div className="bento-grid">
                 <div className="glass-panel bento-col-12" style={{ padding: '3rem', textAlign: 'center', background: 'rgba(25, 28, 41, 0.7)' }}>
-                  <form onSubmit={handleFetcherScrape} className="flex gap-4" style={{ maxWidth: '700px', margin: '0 auto' }}>
+                  <form onSubmit={handleFetcherScrape} className="flex gap-4" style={{ maxWidth: '100%', margin: '0 auto', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                       <Search size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                       <input
                         type="text"
                         className="input"
-                        placeholder="输入商品关键词（如 massage gun）直连抓取..."
+                        placeholder="输入直连抓取关键词 (如 massage gun)..."
                         style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
                         value={fetcherQuery}
                         onChange={(e) => setFetcherQuery(e.target.value)}
