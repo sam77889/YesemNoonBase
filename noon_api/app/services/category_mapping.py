@@ -98,71 +98,29 @@ def list_supported_categories() -> List[str]:
     return list(CATEGORY_MAP.keys())
 
 
-async def get_chinese_labels_bulk(category_vals: List[str], db: AsyncSession) -> Dict[str, str]:
-    result_map = {}
-    to_check_db = []
-    
-    # Check manual mapping first
-    for cv in category_vals:
-        c = cv.lower().strip()
-        matched = False
-        for zh_label, rules in CATEGORY_MAP.items():
-            if c in rules.get("raw", []):
-                result_map[cv] = zh_label
-                matched = True
-                break
-        if not matched:
-            to_check_db.append((cv, c))
-            
-    if not to_check_db:
-        return result_map
-        
-    # Check DB cache
-    c_names = [c for _, c in to_check_db]
-    stmt = select(CategoryTranslation).where(CategoryTranslation.english_name.in_(c_names))
-    result = await db.execute(stmt)
-    cached_trans = {t.english_name: t.chinese_label for t in result.scalars().all()}
-    
-    to_translate = []
-    for cv, c in to_check_db:
-        if c in cached_trans:
-            result_map[cv] = cached_trans[c]
-        else:
-            to_translate.append((cv, c))
-            
-    if not to_translate:
-        return result_map
-        
-    # Auto-translate
-    translator = GoogleTranslator(source='auto', target='zh-CN')
-    
-    async def _translate(cv, c):
-        try:
-            zh_label = await asyncio.to_thread(translator.translate, c)
-            if not zh_label:
-                zh_label = cv
-        except Exception:
-            zh_label = cv
-        return cv, c, zh_label
-        
-    results = await asyncio.gather(*[_translate(cv, c) for cv, c in to_translate])
-    
-    new_translations = {}
-    for cv, c, zh_label in results:
-        result_map[cv] = zh_label
-        new_translations[c] = zh_label
-        
-    # Save to cache
-    from sqlalchemy.dialects.sqlite import insert
-    stmt = insert(CategoryTranslation).values([
-        {"english_name": k, "chinese_label": v} for k, v in new_translations.items()
-    ]).on_conflict_do_nothing()
-    
-    await db.execute(stmt)
-    await db.commit()
-        
-    return result_map
-
 async def get_chinese_label(category_val: str, db: AsyncSession) -> str:
-    res = await get_chinese_labels_bulk([category_val], db)
-    return res.get(category_val, category_val)
+    c = category_val.lower().strip()
+    
+    for zh_label, rules in CATEGORY_MAP.items():
+        if c in rules.get("raw", []):
+            return zh_label
+            
+    stmt = select(CategoryTranslation).where(CategoryTranslation.english_name == c)
+    result = await db.execute(stmt)
+    cached = result.scalar_one_or_none()
+    
+    if cached:
+        return cached.chinese_label
+        
+    translator = GoogleTranslator(source='auto', target='zh-CN')
+    try:
+        zh_label = await asyncio.to_thread(translator.translate, c)
+        if not zh_label:
+            zh_label = category_val
+    except Exception:
+        zh_label = category_val
+        
+    new_trans = CategoryTranslation(english_name=c, chinese_label=zh_label)
+    db.add(new_trans)
+    
+    return zh_label
