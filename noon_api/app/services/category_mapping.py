@@ -135,24 +135,31 @@ async def get_chinese_labels_bulk(category_vals: List[str], db: AsyncSession) ->
         
     # Auto-translate
     translator = GoogleTranslator(source='auto', target='zh-CN')
-    new_objs = []
-    for cv, c in to_translate:
+    
+    async def _translate(cv, c):
         try:
             zh_label = await asyncio.to_thread(translator.translate, c)
             if not zh_label:
                 zh_label = cv
         except Exception:
             zh_label = cv
-            
+        return cv, c, zh_label
+        
+    results = await asyncio.gather(*[_translate(cv, c) for cv, c in to_translate])
+    
+    new_translations = {}
+    for cv, c, zh_label in results:
         result_map[cv] = zh_label
-        new_objs.append(CategoryTranslation(english_name=c, chinese_label=zh_label))
+        new_translations[c] = zh_label
         
     # Save to cache
-    db.add_all(new_objs)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
+    from sqlalchemy.dialects.sqlite import insert
+    stmt = insert(CategoryTranslation).values([
+        {"english_name": k, "chinese_label": v} for k, v in new_translations.items()
+    ]).on_conflict_do_nothing()
+    
+    await db.execute(stmt)
+    await db.commit()
         
     return result_map
 

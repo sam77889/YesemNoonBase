@@ -49,3 +49,34 @@ def test_get_category_stats():
         
     # Clean up overrides
     app.dependency_overrides.clear()
+
+def test_get_chinese_labels_bulk_logic():
+    import asyncio
+    async def _run_test():
+        from app.services.category_mapping import get_chinese_labels_bulk
+        from app.models.product import CategoryTranslation
+        from unittest.mock import MagicMock
+        
+        mock_db = AsyncMock(spec=AsyncSession)
+        mock_result = MagicMock()
+        
+        cached_obj = MagicMock(spec=CategoryTranslation)
+        cached_obj.english_name = "cached_item"
+        cached_obj.chinese_label = "已缓存项"
+        mock_result.scalars.return_value.all.return_value = [cached_obj]
+        mock_db.execute.return_value = mock_result
+        
+        with patch("app.services.category_mapping.GoogleTranslator") as MockTranslator:
+            instance = MockTranslator.return_value
+            instance.translate.return_value = "新翻译项"
+            
+            res = await get_chinese_labels_bulk(["yoga mat", "cached_item", "new_item"], mock_db)
+            
+            assert res["yoga mat"] == "瑜伽垫"
+            assert res["cached_item"] == "已缓存项"
+            assert res["new_item"] == "新翻译项"
+            
+            assert mock_db.execute.call_count == 2
+            mock_db.commit.assert_called_once()
+            
+    asyncio.run(_run_test())
