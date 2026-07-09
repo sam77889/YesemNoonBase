@@ -24,7 +24,7 @@ export function ScraperPage({
   scraping, waitingForLog, onSubmit,
   tasks
 }: ScraperPageProps) {
-  const scraperTasks = tasks.filter(t => !t.job_id?.startsWith('fetcher-'));
+  const scraperTasks = tasks.filter(t => !t.job_id?.startsWith('fetcher-') && !t.job_id?.startsWith('catrev-'));
   const latestScraperTask = scraperTasks[0];
 
   return (
