@@ -26,6 +26,7 @@ export function useGlobalFilters() {
   });
   
   const categoryTabs = useMemo(() => {
+    if (!Array.isArray(rawCounts)) return [];
     return rawCounts.map(item => [item.label, item.count] as [string, number]);
   }, [rawCounts]);
 
@@ -36,7 +37,7 @@ export function useGlobalFilters() {
 
   const categoryParam = useMemo(() => {
     if (selectedCategory === 'All') return undefined;
-    const match = rawCounts.find(c => c.label === selectedCategory);
+    const match = Array.isArray(rawCounts) ? rawCounts.find(c => c.label === selectedCategory) : undefined;
     return match ? match.value : undefined;
   }, [selectedCategory, rawCounts]);
   const qParam = filterText.trim() || undefined;
