@@ -4,6 +4,10 @@ NOON 类目映射服务
 逻辑必须与 noon_dashboard/src/App.tsx 中的 normalizeCategory 保持一致。
 """
 from typing import Dict, List
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.product import CategoryTranslation
+from deep_translator import GoogleTranslator
 
 CATEGORY_MAP: Dict[str, Dict[str, List[str]]] = {
     "按摩器": {
@@ -90,3 +94,34 @@ def normalize_category(category: str | None, title: str | None) -> str:
 def list_supported_categories() -> List[str]:
     """返回支持类目分析的中文类目名列表。"""
     return list(CATEGORY_MAP.keys())
+
+
+async def get_chinese_label(category_val: str, db: AsyncSession) -> str:
+    # Check manual mapping first
+    c = category_val.lower().strip()
+    for zh_label, rules in CATEGORY_MAP.items():
+        if c in rules.get("raw", []):
+            return zh_label
+    
+    # Check DB cache
+    stmt = select(CategoryTranslation).where(CategoryTranslation.english_name == c)
+    result = await db.execute(stmt)
+    cached = result.scalar_one_or_none()
+    if cached:
+        return cached.chinese_label
+
+    # Auto-translate
+    try:
+        translator = GoogleTranslator(source='auto', target='zh-CN')
+        zh_label = translator.translate(c)
+        if not zh_label:
+            zh_label = category_val
+    except Exception:
+        zh_label = category_val
+
+    # Save to cache
+    new_trans = CategoryTranslation(english_name=c, chinese_label=zh_label)
+    db.add(new_trans)
+    await db.commit()
+    
+    return zh_label

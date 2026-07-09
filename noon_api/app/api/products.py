@@ -11,13 +11,16 @@ from sqlalchemy.orm import selectinload
 from app.models.database import get_db
 from app.models.product import TrackedProduct, PriceSnapshot
 from app.schemas.product import (
-    ProductCreate, ProductResponse, ProductWithPrices, PriceSnapshotResponse
+    ProductCreate, ProductResponse, ProductWithPrices, PriceSnapshotResponse, CategoryCount
 )
 from app.services.price_monitor import get_price_history
 
 logger = logging.getLogger(__name__)
 
 from app.services.fetcher_reviews import fetch_product_reviews
+from app.services.category_mapping import get_chinese_label
+
+UNCATEGORIZED_PARAM = "__UNCATEGORIZED__"
 
 router = APIRouter(prefix="/api/v1/products", tags=["商品管理"])
 
@@ -99,6 +102,46 @@ async def get_product_stats(db: AsyncSession = Depends(get_db)):
         "active_products": active,
         "total_snapshots": snapshots,
     }
+
+
+@router.get("/stats/categories", response_model=list[CategoryCount])
+async def get_category_counts(db: AsyncSession = Depends(get_db)):
+    """按原始英文类目（含空类目）分组计数，供前端反查中文标签 tab。"""
+    stmt = (
+        select(TrackedProduct.category, func.count())
+        .where(TrackedProduct.status == "ACTIVE")
+        .group_by(TrackedProduct.category)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    label_counts = {}
+    label_values = {}
+    uncategorized_count = 0
+
+    for cat_val, count in rows:
+        if not cat_val:
+            uncategorized_count += count
+            continue
+        
+        zh_label = await get_chinese_label(cat_val, db)
+        
+        if zh_label not in label_counts:
+            label_counts[zh_label] = 0
+            label_values[zh_label] = []
+        
+        label_counts[zh_label] += count
+        label_values[zh_label].append(cat_val.strip())
+
+    result = []
+    for label, count in label_counts.items():
+        val_str = ",".join(label_values[label])
+        result.append(CategoryCount(label=label, value=val_str, count=count))
+
+    if uncategorized_count > 0:
+        result.append(CategoryCount(label="未分类", value=UNCATEGORIZED_PARAM, count=uncategorized_count))
+
+    result.sort(key=lambda x: x.count, reverse=True)
+    return result
 
 
 @router.get("/{sku}", response_model=ProductWithPrices)
