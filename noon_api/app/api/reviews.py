@@ -177,6 +177,8 @@ async def get_category_analysis(
     _translate_reviews(display_reviews)
     _translate_analysis(analysis)
 
+    latest_fetched = max((r.fetched_at for r in review_rows if r.fetched_at), default=None)
+
     return {
         "status": "success",
         "message": f"类目 {category} 聚合分析完成，来自 {product_count} 个商品的 {len(all_reviews)} 条评论",
@@ -186,4 +188,6 @@ async def get_category_analysis(
         "reviews": display_reviews,
         "analysis": analysis,
         "intercepted": False,
+        "from_cache": True,
+        "cached_at": latest_fetched.isoformat() if latest_fetched else None,
     }

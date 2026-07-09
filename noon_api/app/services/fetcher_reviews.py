@@ -300,6 +300,8 @@ def analyze_reviews(reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
         cons_keywords=cons_keywords,
         verified_ratio=verified_ratio,
         rating_reliability=rating_reliability,
+        timeline=timeline,
+        sentiment_timeline=sentiment_timeline,
     )
 
     return {
@@ -329,6 +331,8 @@ def _generate_summary(
     cons_keywords: List[Dict[str, Any]],
     verified_ratio: float | None,
     rating_reliability: float | None,
+    timeline: List[Dict[str, Any]] = None,
+    sentiment_timeline: List[Dict[str, Any]] = None,
 ) -> str:
     total = sum(sentiment_distribution.values()) or 1
     pos_pct = round(sentiment_distribution["positive"] / total * 100)
@@ -337,30 +341,53 @@ def _generate_summary(
     text_total = sum(text_sentiment_distribution.values()) or 1
     text_pos_pct = round(text_sentiment_distribution["positive"] / text_total * 100)
 
-    parts = [f"共 {count} 条评论，平均评分 {average_rating}。"]
+    parts = [f"【整体口碑】\n共分析 {count} 条评论，平均评分 {average_rating}。"]
 
     if pos_pct >= 70:
-        parts.append(f"评分好评率高达 {pos_pct}%，整体口碑优秀。")
+        parts.append(f"好评率高达 {pos_pct}%，整体口碑优秀。")
     elif pos_pct >= 50:
-        parts.append(f"评分好评率 {pos_pct}%，口碑中等偏上。")
+        parts.append(f"好评率 {pos_pct}%，口碑中等偏上。")
     elif neg_pct >= 40:
-        parts.append(f"差评率 {neg_pct}%，口碑较差，需关注。")
+        parts.append(f"差评率 {neg_pct}%，口碑较差，需重点关注。")
     else:
         parts.append(f"好评率 {pos_pct}%，口碑一般。")
 
     if text_pos_pct != pos_pct:
         if text_pos_pct > pos_pct:
-            parts.append(f"文本情感分析显示好评占比 {text_pos_pct}%，高于评分好评率，用户文字表达更积极。")
+            parts.append(f"但文本情感好评占比 ({text_pos_pct}%) 高于评分好评率，用户实际文字表达更积极。")
         else:
-            parts.append(f"文本情感分析显示好评占比 {text_pos_pct}%，低于评分好评率，部分高评分评论文字含负面情绪。")
+            parts.append(f"但文本情感好评占比 ({text_pos_pct}%) 低于评分好评率，部分高评分评论文字中含有负面情绪。")
+
+    parts.append("\n【痛点分析】")
+    if cons_keywords:
+        top_cons = "、".join(k["word"] for k in cons_keywords[:5])
+        parts.append(f"用户主要吐槽点集中在：{top_cons}。建议针对这些高频词汇对应的功能或质量问题进行排查和改进。")
+    else:
+        parts.append("未发现明显的高频吐槽痛点。")
 
     if pros_keywords:
         top_pros = "、".join(k["word"] for k in pros_keywords[:5])
-        parts.append(f"用户主要认可：{top_pros}。")
+        parts.append(f"\n【优势亮点】\n用户主要认可：{top_pros}。")
 
-    if cons_keywords:
-        top_cons = "、".join(k["word"] for k in cons_keywords[:5])
-        parts.append(f"主要吐槽点：{top_cons}。")
+    parts.append("\n【趋势与可靠性】")
+    
+    # 简单的趋势分析
+    if timeline and len(timeline) >= 3:
+        recent_count = sum(t["count"] for t in timeline[-3:])
+        older_count = sum(t["count"] for t in timeline[:-3])
+        if older_count > 0:
+            avg_older = older_count / len(timeline[:-3])
+            avg_recent = recent_count / 3
+            if avg_recent > avg_older * 1.5:
+                parts.append("近期评论量呈现显著上升趋势。")
+            elif avg_recent < avg_older * 0.5:
+                parts.append("近期评论量有所下降。")
+    
+    if sentiment_timeline and len(sentiment_timeline) >= 3:
+        recent_neg = sum(t.get("negative", 0) for t in sentiment_timeline[-3:])
+        recent_total = sum(t.get("positive", 0) + t.get("neutral", 0) + t.get("negative", 0) for t in sentiment_timeline[-3:])
+        if recent_total > 0 and (recent_neg / recent_total) >= 0.4:
+            parts.append("警报：近期负面情感评论激增，请立刻关注最新评价详情！")
 
     if verified_ratio is not None:
         if verified_ratio >= 0.7:
@@ -372,11 +399,9 @@ def _generate_summary(
 
     if rating_reliability is not None:
         if rating_reliability >= 0.8:
-            parts.append("评分与文本情感一致性高，评分可靠。")
-        elif rating_reliability >= 0.5:
-            parts.append("部分评论评分与文字情感不一致，评分参考性一般。")
-        else:
-            parts.append("评分与文字情感矛盾较多，评分参考价值低。")
+            parts.append("评分与文本情感一致性高。")
+        elif rating_reliability <= 0.5:
+            parts.append("评分与文字情感矛盾较多，请以文字痛点为准。")
 
     return "".join(parts)
 

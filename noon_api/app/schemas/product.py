@@ -92,6 +92,8 @@ class CategoryAnalysisResponse(BaseModel):
     reviews: list[dict]
     analysis: dict
     intercepted: bool
+    from_cache: Optional[bool] = None
+    cached_at: Optional[str] = None
 
 
 # ─────────────────────────────────────────────
