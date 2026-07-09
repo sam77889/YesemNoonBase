@@ -89,3 +89,11 @@ class PriceSnapshot(Base):
 
     def __repr__(self):
         return f"<PriceSnapshot sku={self.sku} price={self.price} at={self.scraped_at}>"
+
+
+class CategoryTranslation(Base):
+    __tablename__ = "category_translations"
+
+    english_name = Column(String, primary_key=True, index=True)
+    chinese_label = Column(String, nullable=False)
+

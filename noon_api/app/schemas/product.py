@@ -64,6 +64,12 @@ class ProductWithPrices(ProductResponse):
     price_snapshots: list[PriceSnapshotResponse] = []
 
 
+class CategoryCount(BaseModel):
+    label: str
+    value: str
+    count: int
+
+
 class CategoryAnalyzeRequest(BaseModel):
     """启动类目评论分析的请求体"""
     category: str
