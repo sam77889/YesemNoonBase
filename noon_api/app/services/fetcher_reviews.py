@@ -457,6 +457,8 @@ async def _fetch_raw_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
         soup = BeautifulSoup(html, "lxml")
 
         reviews_raw: List[Dict[str, Any]] = []
+        aggregate_rating: Dict[str, Any] | None = None
+        product_name: str | None = None
         for script in soup.find_all("script", {"type": "application/ld+json"}):
             text = script.get_text()
             if not text:
@@ -476,6 +478,11 @@ async def _fetch_raw_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
                         reviews_raw.extend(revs)
                     elif isinstance(revs, dict):
                         reviews_raw.append(revs)
+                    ag = e.get("aggregateRating")
+                    if isinstance(ag, dict):
+                        aggregate_rating = ag
+                    if e.get("name"):
+                        product_name = e["name"]
 
         # 扁平化 JSON-LD review 字段到 _normalize_review 期望的格式
         reviews: List[Dict[str, Any]] = []
@@ -498,15 +505,34 @@ async def _fetch_raw_reviews(sku: str, limit: int = 50) -> Dict[str, Any]:
 
         if not reviews:
             result["status"] = "empty"
-            result["message"] = "该商品暂无评论（商品页 JSON-LD 无 review 数据）。"
-            logger.info("[Reviews] 无评论数据")
+            # 区分两种情况：商品有 aggregateRating（有评分但 SSR 未内联评论）vs 完全无评分
+            if aggregate_rating:
+                rv = aggregate_rating.get("ratingValue")
+                rc = aggregate_rating.get("reviewCount") or aggregate_rating.get("ratingCount")
+                rating_part = f"评分 {rv}" if rv is not None else ""
+                count_part = f"（{rc} 条评价）" if rc else ""
+                result["message"] = (
+                    f"该商品{rating_part}{count_part}暂无可展示的评论正文（NOON 未在页面内联评论数据，"
+                    f"完整评论受 Akamai 防护限制）。"
+                )
+            else:
+                result["message"] = (
+                    "该商品暂无评论与评分数据（NOON 页面未提供评论或评分信息）。"
+                )
+            # 附带 aggregateRating 供前端展示评分概览
+            if aggregate_rating:
+                result["aggregate_rating"] = {
+                    "ratingValue": aggregate_rating.get("ratingValue"),
+                    "reviewCount": aggregate_rating.get("reviewCount") or aggregate_rating.get("ratingCount"),
+                    "bestRating": aggregate_rating.get("bestRating"),
+                }
+            if product_name:
+                result["product_name"] = product_name
+            logger.info(f"[Reviews] 无评论数据, aggregateRating={'有' if aggregate_rating else '无'}")
             return result
 
         result["status"] = "success"
-        result["message"] = (
-            f"成功提取 {len(reviews)} 条评论（来自商品页 JSON-LD Top 评论，"
-            f"完整评论受 Akamai 防护限制）。"
-        )
+        result["message"] = f"成功提取 {len(reviews)} 条评论。"
         result["reviews"] = reviews
         result["count"] = len(reviews)
         logger.info(f"[Reviews] 提取到 {len(reviews)} 条评论")

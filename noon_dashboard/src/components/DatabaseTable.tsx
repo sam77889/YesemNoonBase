@@ -3,39 +3,40 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   flexRender,
 } from '@tanstack/react-table';
 import { Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-
-export interface Product {
-  sku: string;
-  title: string;
-  brand?: string | null;
-  price?: number | null;
-  original_price?: number | null;
-  currency?: string | null;
-  image_url?: string | null;
-  url?: string | null;
-  is_express?: boolean;
-  category?: string | null;
-  review_count?: number | null;
-  rating?: number | null;
-  status?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
+import type { Product } from '../api';
+import type { SortState } from '../types';
+import { formatDateTime } from '../lib/utils';
 
 interface DatabaseTableProps {
   data: Product[];
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+  onSortingChange: (sort: SortState) => void;
   onRowClick: (sku: string) => void;
   onBatchDelete: (skus: string[]) => void;
 }
 
-export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, onBatchDelete }) => {
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+export const DatabaseTable: React.FC<DatabaseTableProps> = ({
+  data,
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  onSortingChange,
+  onRowClick,
+  onBatchDelete,
+}) => {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'review_count', desc: true }
+    { id: 'review_count', desc: true },
   ]);
   const [rowSelection, setRowSelection] = useState({});
 
@@ -99,7 +100,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       accessorKey: 'price',
       header: ({ column }) => {
         return (
-          <div 
+          <div
             className="flex items-center gap-1"
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={column.getToggleSortingHandler()}
@@ -134,7 +135,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       accessorKey: 'review_count',
       header: ({ column }) => {
         return (
-          <div 
+          <div
             className="flex items-center gap-1"
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={column.getToggleSortingHandler()}
@@ -160,7 +161,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       accessorKey: 'rating',
       header: ({ column }) => {
         return (
-          <div 
+          <div
             className="flex items-center gap-1"
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={column.getToggleSortingHandler()}
@@ -186,7 +187,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       accessorKey: 'updated_at',
       header: ({ column }) => {
         return (
-          <div 
+          <div
             className="flex items-center gap-1"
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={column.getToggleSortingHandler()}
@@ -202,18 +203,21 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       cell: ({ getValue }) => {
         const val = getValue<string>();
         if (!val) return '-';
-        const dateStr = val.endsWith('Z') ? val : val + 'Z';
-        const date = new Date(dateStr);
-        const yyyy = date.getFullYear();
-        const MM = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        const HH = String(date.getHours()).padStart(2, '0');
-        const mm = String(date.getMinutes()).padStart(2, '0');
-        const ss = String(date.getSeconds()).padStart(2, '0');
-        return <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{`${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`}</div>;
+        return <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{formatDateTime(val)}</div>;
       }
     }
   ], []);
+
+  const handleSortingChange = (
+    updater: SortingState | ((old: SortingState) => SortingState),
+  ) => {
+    const next = typeof updater === 'function' ? updater(sorting) : updater;
+    setSorting(next);
+    const first = next[0];
+    if (first) {
+      onSortingChange({ key: first.id as SortState['key'], direction: first.desc ? 'desc' : 'asc' });
+    }
+  };
 
   const table = useReactTable({
     data,
@@ -222,11 +226,10 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
       sorting,
       rowSelection,
     },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualSorting: true, // 排序由服务端完成
   });
 
   const handleDelete = () => {
@@ -238,29 +241,36 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
     }
   };
 
+  const pageIndex = page - 1;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex < pageCount - 1;
+
   return (
     <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      
+
       {/* Table Action Bar (Batch delete etc) */}
       {Object.keys(rowSelection).length > 0 && (
-        <div style={{ 
-          padding: '1rem', 
-          background: 'rgba(139, 92, 246, 0.15)', 
+        <div style={{
+          padding: '1rem',
+          background: 'rgba(139, 92, 246, 0.15)',
           borderBottom: '1px solid var(--panel-border)',
           display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <span style={{ fontWeight: 500, color: '#a78bfa' }}>已选择 {Object.keys(rowSelection).length} 项</span>
-          <button 
+          <button
             className="flex items-center gap-2"
             onClick={handleDelete}
-            style={{ 
-              background: 'rgba(239, 68, 68, 0.2)', 
-              color: '#ef4444', 
-              border: '1px solid rgba(239, 68, 68, 0.5)', 
-              padding: '0.5rem 1rem', 
-              borderRadius: '8px', 
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
               cursor: 'pointer',
               fontWeight: 600,
               transition: 'all 0.2s'
@@ -296,17 +306,17 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
           <tbody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map(row => (
-                <tr 
-                  key={row.id} 
+                <tr
+                  key={row.id}
                   onClick={() => onRowClick(row.original.sku)}
-                  style={{ 
-                    cursor: 'pointer', 
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  style={{
+                    cursor: 'pointer',
+                    borderBottom: '1px solid var(--surface-3)',
                     background: row.getIsSelected() ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
                     transition: 'background 0.2s'
                   }}
                   onMouseOver={(e) => {
-                    if (!row.getIsSelected()) e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                    if (!row.getIsSelected()) e.currentTarget.style.background = 'var(--surface-2)';
                   }}
                   onMouseOut={(e) => {
                     if (!row.getIsSelected()) e.currentTarget.style.background = 'transparent';
@@ -330,27 +340,29 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      <div style={{ 
-        padding: '1rem', 
+      {/* Pagination Controls (服务端驱动) */}
+      <div style={{
+        padding: '1rem',
         borderTop: '1px solid var(--panel-border)',
         display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'rgba(15, 17, 26, 0.5)'
+        background: 'var(--surface-2)'
       }}>
         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          共 {table.getFilteredRowModel().rows.length} 条数据
+          共 {total} 条数据
         </div>
-        
+
         <div className="flex items-center gap-2">
           <select
-            value={table.getState().pagination.pageSize}
+            value={pageSize}
             onChange={e => {
-              table.setPageSize(Number(e.target.value))
+              onPageSizeChange?.(Number(e.target.value));
             }}
-            style={{ 
-              background: 'rgba(255,255,255,0.05)', 
+            style={{
+              background: 'var(--surface-3)',
               border: '1px solid var(--panel-border)',
               color: 'white',
               padding: '0.4rem',
@@ -358,43 +370,43 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({ data, onRowClick, 
               marginRight: '1rem'
             }}
           >
-            {[10, 20, 50, 100, 500].map(pageSize => (
-              <option key={pageSize} value={pageSize} style={{ background: '#191c29' }}>
-                {pageSize} 条/页
+            {PAGE_SIZE_OPTIONS.map(size => (
+              <option key={size} value={size} style={{ background: '#191c29' }}>
+                {size} 条/页
               </option>
             ))}
           </select>
 
           <button
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            style={{ padding: '0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', cursor: table.getCanPreviousPage() ? 'pointer' : 'not-allowed', opacity: table.getCanPreviousPage() ? 1 : 0.5 }}
+            onClick={() => onPageChange(1)}
+            disabled={!canPrev}
+            style={{ padding: '0.4rem', borderRadius: '6px', background: 'var(--surface-3)', cursor: canPrev ? 'pointer' : 'not-allowed', opacity: canPrev ? 1 : 0.5 }}
           >
             <ChevronsLeft size={16} />
           </button>
           <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            style={{ padding: '0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', cursor: table.getCanPreviousPage() ? 'pointer' : 'not-allowed', opacity: table.getCanPreviousPage() ? 1 : 0.5 }}
+            onClick={() => onPageChange(page - 1)}
+            disabled={!canPrev}
+            style={{ padding: '0.4rem', borderRadius: '6px', background: 'var(--surface-3)', cursor: canPrev ? 'pointer' : 'not-allowed', opacity: canPrev ? 1 : 0.5 }}
           >
             <ChevronLeft size={16} />
           </button>
-          
+
           <span style={{ fontSize: '0.85rem', margin: '0 0.5rem' }}>
-            第 {table.getState().pagination.pageIndex + 1} / {table.getPageCount()} 页
+            第 {page} / {pageCount} 页
           </span>
 
           <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            style={{ padding: '0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', cursor: table.getCanNextPage() ? 'pointer' : 'not-allowed', opacity: table.getCanNextPage() ? 1 : 0.5 }}
+            onClick={() => onPageChange(page + 1)}
+            disabled={!canNext}
+            style={{ padding: '0.4rem', borderRadius: '6px', background: 'var(--surface-3)', cursor: canNext ? 'pointer' : 'not-allowed', opacity: canNext ? 1 : 0.5 }}
           >
             <ChevronRight size={16} />
           </button>
           <button
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-            style={{ padding: '0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', cursor: table.getCanNextPage() ? 'pointer' : 'not-allowed', opacity: table.getCanNextPage() ? 1 : 0.5 }}
+            onClick={() => onPageChange(pageCount)}
+            disabled={!canNext}
+            style={{ padding: '0.4rem', borderRadius: '6px', background: 'var(--surface-3)', cursor: canNext ? 'pointer' : 'not-allowed', opacity: canNext ? 1 : 0.5 }}
           >
             <ChevronsRight size={16} />
           </button>

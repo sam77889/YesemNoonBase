@@ -3,8 +3,8 @@ NOON 数据分析系统 - 商品相关 Pydantic 接口模型
 用于 API 请求/响应的数据校验与序列化
 """
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductBase(BaseModel):
@@ -92,3 +92,56 @@ class CategoryAnalysisResponse(BaseModel):
     reviews: list[dict]
     analysis: dict
     intercepted: bool
+
+
+# ─────────────────────────────────────────────
+# 性能优化 P0-1 / P0-3 新增响应模型
+# ─────────────────────────────────────────────
+
+class ProductListResponse(BaseModel):
+    """商品列表（服务端分页）响应体"""
+    items: List[ProductResponse]
+    total: int
+
+
+class CategoryCount(BaseModel):
+    """类目原始英文计数（用于前端反查中文标签）"""
+    category: Optional[str] = None  # null 表示空类目
+    count: int
+
+
+class OverviewSummary(BaseModel):
+    total_products: int
+    active_products: int
+    total_reviews: int
+
+
+class PriceBucket(BaseModel):
+    name: str
+    productCount: int
+    totalReviews: int
+
+
+class PriceSalesScatterPoint(BaseModel):
+    name: str
+    price: Optional[float] = None
+    sales: int
+    reviews: int
+    rating: float
+
+
+class BrandRankItem(BaseModel):
+    """品牌排名项。字段用英文，序列化时通过 alias 输出中文 key（与前端保持一致）。"""
+    name: str
+    product_count: int = Field(alias='商品数')
+    total_reviews: int = Field(alias='总评论')
+    avg_rating: float = Field(alias='均分')
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class OverviewAggregation(BaseModel):
+    """大盘总览聚合（服务端复刻前端算法）"""
+    summary: OverviewSummary
+    price_distribution: List[PriceBucket]
+    price_sales_scatter: List[PriceSalesScatterPoint]
+    brand_ranking: List[BrandRankItem]

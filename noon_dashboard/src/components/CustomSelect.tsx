@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
 
@@ -10,7 +10,7 @@ export interface SelectOption {
 interface CustomSelectProps {
   value: string | number;
   options: SelectOption[];
-  onChange: (value: any) => void;
+  onChange: (value: string | number) => void;
   disabled?: boolean;
   style?: React.CSSProperties;
   className?: string;
@@ -19,7 +19,9 @@ interface CustomSelectProps {
 
 export function CustomSelect({ value, options, onChange, disabled, style, className, title }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(o => o.value === value) || options[0];
 
@@ -27,27 +29,82 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setFocusedIndex(-1);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (disabled) return;
+
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (isOpen && focusedIndex >= 0) {
+          onChange(options[focusedIndex].value);
+          setIsOpen(false);
+          setFocusedIndex(-1);
+          triggerRef.current?.focus();
+        } else {
+          setIsOpen(!isOpen);
+          if (!isOpen) setFocusedIndex(0);
+        }
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!isOpen) {
+          setIsOpen(true);
+          setFocusedIndex(0);
+        } else {
+          setFocusedIndex(prev => (prev + 1) % options.length);
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (isOpen) {
+          setFocusedIndex(prev => (prev - 1 + options.length) % options.length);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setIsOpen(false);
+        setFocusedIndex(-1);
+        triggerRef.current?.focus();
+        break;
+      case 'Tab':
+        if (isOpen) {
+          setIsOpen(false);
+          setFocusedIndex(-1);
+        }
+        break;
+    }
+  }, [disabled, isOpen, focusedIndex, options, onChange]);
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className={className}
       style={{ position: 'relative', userSelect: 'none', ...style }}
       title={title}
     >
-      <div 
+      <div
+        ref={triggerRef}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 1rem',
           height: '100%',
+          minHeight: '44px',
           background: disabled ? 'rgba(255,255,255,0.02)' : 'var(--panel-bg)',
           border: isOpen ? '1px solid var(--primary)' : '1px solid var(--panel-border)',
           borderRadius: 'inherit',
@@ -55,13 +112,9 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
           color: disabled ? 'var(--text-muted)' : 'white',
           opacity: disabled ? 0.6 : 1,
           transition: 'all 0.2s ease',
+          outline: 'none',
         }}
-        onMouseEnter={(e) => {
-          if (!disabled && !isOpen) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-        }}
-        onMouseLeave={(e) => {
-          if (!disabled && !isOpen) e.currentTarget.style.borderColor = 'var(--panel-border)';
-        }}
+        className={!disabled && !isOpen ? 'select-trigger' : ''}
       >
         <span style={{ fontSize: '0.9rem', marginRight: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {selectedOption?.label}
@@ -76,6 +129,7 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -5, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
+            role="listbox"
             style={{
               position: 'absolute',
               top: 'calc(100% + 8px)',
@@ -84,7 +138,7 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
               minWidth: '130px',
               background: 'rgba(20, 23, 35, 0.95)',
               backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border-strong)',
               borderRadius: '12px',
               padding: '0.4rem',
               zIndex: 50,
@@ -92,15 +146,21 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxHeight: '250px', overflowY: 'auto' }}>
-              {options.map((opt) => {
+              {options.map((opt, index) => {
                 const isSelected = opt.value === value;
+                const isFocused = index === focusedIndex;
                 return (
                   <div
                     key={opt.value}
+                    role="option"
+                    aria-selected={isSelected}
                     onClick={() => {
                       onChange(opt.value);
                       setIsOpen(false);
+                      setFocusedIndex(-1);
+                      triggerRef.current?.focus();
                     }}
+                    onMouseEnter={() => setFocusedIndex(index)}
                     style={{
                       padding: '0.5rem 0.75rem',
                       borderRadius: '8px',
@@ -108,16 +168,10 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: isSelected ? 'rgba(96, 165, 250, 0.15)' : 'transparent',
+                      background: isSelected ? 'rgba(96, 165, 250, 0.15)' : isFocused ? 'var(--surface-3)' : 'transparent',
                       color: isSelected ? '#60a5fa' : 'var(--text-main)',
                       fontSize: '0.85rem',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'transparent';
+                      transition: 'background 0.15s'
                     }}
                   >
                     <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>

@@ -1,25 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { ExecutionBlock, LogType } from '../types';
 
-export type LogType = 'info' | 'success' | 'warning' | 'error';
-
-export interface LogEntry {
-  id: string;
-  timestamp: Date;
-  message: string;
-  type: LogType;
-}
-
-export interface ExecutionBlock {
-  id: string;
-  title: string;
-  source: 'analysis' | 'scraper' | 'fetcher';
-  status: 'running' | 'success' | 'error';
-  timestamp: Date;
-  logs: LogEntry[];
-  progress: number;
-}
+export type { LogType, ExecutionBlock };
 
 interface SystemLogsPageProps {
   blocks: ExecutionBlock[];
@@ -128,7 +112,7 @@ export function SystemLogsPage({ blocks, onClear }: SystemLogsPageProps) {
       exit={{ opacity: 0, y: -10 }}
       style={{ paddingBottom: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
             <Terminal size={28} style={{ color: 'var(--primary)' }} />
@@ -157,7 +141,7 @@ export function SystemLogsPage({ blocks, onClear }: SystemLogsPageProps) {
                   onClick={() => setExpandedId(isExpanded ? null : block.id)}
                   style={{ 
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '1rem 1.5rem', background: 'rgba(255,255,255,0.05)',
+                    padding: '1rem 1.5rem', background: 'var(--surface-3)',
                     border: '1px solid #1f2937', borderRadius: isExpanded ? '12px 12px 0 0' : '12px',
                     cursor: 'pointer', transition: 'background 0.2s'
                   }}

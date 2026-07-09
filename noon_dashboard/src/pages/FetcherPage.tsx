@@ -32,7 +32,7 @@ export function FetcherPage({
       </p>
 
       <div className="bento-grid">
-        <div className="glass-panel bento-col-12" style={{ padding: '3rem', textAlign: 'center', background: 'rgba(25, 28, 41, 0.7)' }}>
+        <div className="glass-panel bento-col-12" style={{ padding: '3rem', textAlign: 'center', background: 'var(--surface)' }}>
           <form onSubmit={onSubmit} className="flex gap-4" style={{ maxWidth: '100%', margin: '0 auto', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Search size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -40,7 +40,7 @@ export function FetcherPage({
                 type="text"
                 className="input"
                 placeholder="输入直连抓取关键词 (如 massage gun)..."
-                style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ paddingLeft: '3rem', paddingRight: '1rem', height: '54px', fontSize: '1.05rem', borderRadius: '16px', background: 'var(--surface-2)', border: '1px solid rgba(255,255,255,0.1)' }}
                 value={fetcherQuery}
                 onChange={(e) => onFetcherQueryChange(e.target.value)}
                 disabled={scraping || waitingForLog}

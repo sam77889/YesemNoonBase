@@ -1,10 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>noon_dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0e17" />
+    <meta name="description" content="NOON 跨境电商洞察与智能爬虫系统 — 大盘总览、竞品抓取、评论深度分析" />
+    <title>NOON 洞察 · 跨境电商数据大盘</title>
+    <!-- 防主题闪烁：在首屏渲染前同步 data-theme -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('noon-theme');
+          if (t !== 'light' && t !== 'dark') t = 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
