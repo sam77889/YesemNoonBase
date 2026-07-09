@@ -60,5 +60,7 @@ Thumbs.db
 *.sw?
 .mimocode/
 .codebuddy/
+.agents
 cookies*
 CODEBUDDY.md
+.worktrees/
