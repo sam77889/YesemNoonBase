@@ -81,11 +81,11 @@ export function ScraperPage({
         <div className="glass-panel bento-col-12" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ marginBottom: '1.5rem' }}>当前任务状态</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {latestScraperTask ? (
                 <TaskCard key={latestScraperTask.job_id} task={latestScraperTask} source="scraper" />
               ) : (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无任务记录</div>
+                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>暂无任务记录</motion.div>
               )}
             </AnimatePresence>
           </div>

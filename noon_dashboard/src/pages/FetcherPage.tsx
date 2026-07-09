@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Search, RefreshCw, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomSelect } from '../components/CustomSelect';
@@ -22,10 +21,8 @@ export function FetcherPage({
   scraping, waitingForLog, onSubmit,
   tasks
 }: FetcherPageProps) {
-  const latestFetcherTask = useMemo(() => {
-    const fetcherTasks = tasks.filter(t => t.job_id?.startsWith('fetcher-'));
-    return fetcherTasks[0];
-  }, [tasks]);
+  const fetcherTasks = tasks.filter(t => t.job_id?.startsWith('fetcher-'));
+  const latestFetcherTask = fetcherTasks[0];
 
   return (
     <motion.div key="fetcher" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
