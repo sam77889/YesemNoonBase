@@ -104,10 +104,7 @@ class ProductListResponse(BaseModel):
     total: int
 
 
-class CategoryCount(BaseModel):
-    """类目原始英文计数（用于前端反查中文标签）"""
-    category: Optional[str] = None  # null 表示空类目
-    count: int
+
 
 
 class OverviewSummary(BaseModel):
