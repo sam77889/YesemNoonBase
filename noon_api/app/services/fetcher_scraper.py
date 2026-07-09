@@ -63,7 +63,7 @@ def _adapt(raw: dict, query: str) -> dict:
         "price": price,
         "original_price": original_price,
         "brand": raw.get("brand") or "",
-        "category": query.strip(),
+        "category": query.strip() if not __import__("re").match(r"^[nN][a-zA-Z0-9]{6,20}$", query.strip()) else "",
         "image_url": raw.get("image") or "",
         "product_url": raw.get("url") or "",
         "rating": _to_float(raw.get("rating")),

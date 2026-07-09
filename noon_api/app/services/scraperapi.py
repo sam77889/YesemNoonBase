@@ -202,7 +202,10 @@ def parse_noon_search_html(html: str, query: str = "") -> list[dict]:
                 if nudge_match:
                     category = nudge_match.group(1).strip()
                 elif query:
-                    category = query.strip()
+                    import re
+                    q = query.strip()
+                    if not re.match(r'^[nN][a-zA-Z0-9]{6,20}$', q):
+                        category = q
 
                 # 计算折扣
                 discount_percent = None

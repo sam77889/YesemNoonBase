@@ -197,8 +197,13 @@ async def run_search_scrape(
 
     if all_products:
         # 入库前统一打上搜索关键词作为分类标签（小写化保证一致可追溯）
+        import re
+        is_sku_query = bool(re.match(r'^[nN][a-zA-Z0-9]{6,20}$', query.strip()))
         for p in all_products:
-            p['category'] = query.lower()
+            if not is_sku_query:
+                p['category'] = query.lower()
+            elif is_sku_query and p.get('category') == query.lower():
+                p['category'] = ""
         saved_count = await save_products_to_db(db, all_products)
         task.result_count = saved_count
         task.status = "SUCCESS"
