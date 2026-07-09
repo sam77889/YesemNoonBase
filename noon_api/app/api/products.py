@@ -18,7 +18,7 @@ from app.services.price_monitor import get_price_history
 logger = logging.getLogger(__name__)
 
 from app.services.fetcher_reviews import fetch_product_reviews
-from app.services.category_mapping import get_chinese_label
+from app.services.category_mapping import get_chinese_label, get_chinese_labels_bulk
 
 UNCATEGORIZED_PARAM = "__UNCATEGORIZED__"
 
@@ -118,19 +118,27 @@ async def get_category_counts(db: AsyncSession = Depends(get_db)):
     label_values = {}
     uncategorized_count = 0
 
+    valid_cats = []
+    cat_to_count = {}
     for cat_val, count in rows:
         if not cat_val:
             uncategorized_count += count
             continue
+        valid_cats.append(cat_val)
+        cat_to_count[cat_val] = count
         
-        zh_label = await get_chinese_label(cat_val, db)
-        
-        if zh_label not in label_counts:
-            label_counts[zh_label] = 0
-            label_values[zh_label] = []
-        
-        label_counts[zh_label] += count
-        label_values[zh_label].append(cat_val.strip())
+    if valid_cats:
+        cat_to_zh = await get_chinese_labels_bulk(valid_cats, db)
+        for cat_val in valid_cats:
+            zh_label = cat_to_zh.get(cat_val, cat_val)
+            count = cat_to_count[cat_val]
+            
+            if zh_label not in label_counts:
+                label_counts[zh_label] = 0
+                label_values[zh_label] = []
+            
+            label_counts[zh_label] += count
+            label_values[zh_label].append(cat_val.strip())
 
     result = []
     for label, count in label_counts.items():
