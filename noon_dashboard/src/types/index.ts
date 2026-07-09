@@ -165,6 +165,7 @@ export interface ReviewResponse {
   intercepted: boolean;
   aggregate_rating?: AggregateRating;
   product_name?: string;
+  product_image?: string;
   from_cache?: boolean;
   cached_at?: string | null;
 }

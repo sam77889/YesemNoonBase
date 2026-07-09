@@ -165,6 +165,12 @@ async def get_product_reviews(
         "cached_at": "ISO" | null,
     }
     """
+    # 获取商品的基本信息（如果有）
+    stmt_prod = select(TrackedProduct).where(TrackedProduct.sku == sku)
+    prod = (await db.execute(stmt_prod)).scalar_one_or_none()
+    product_name = prod.title if prod else None
+    product_image = prod.image_url if prod else None
+
     # 1. 非 refresh 模式：先查本地
     if not refresh:
         stmt = (
@@ -209,6 +215,8 @@ async def get_product_reviews(
                 "intercepted": False,
                 "from_cache": True,
                 "cached_at": latest_fetched.isoformat() if latest_fetched else None,
+                "product_name": product_name,
+                "product_image": product_image,
             }
         # 本地无数据，落回实时抓取
 
@@ -216,6 +224,9 @@ async def get_product_reviews(
     result = await fetch_product_reviews(sku, limit=limit)
     result["from_cache"] = False
     result["cached_at"] = None
+    if not result.get("product_name"):
+        result["product_name"] = product_name
+    result["product_image"] = product_image
 
     # 3. 抓取成功则持久化（覆盖旧数据）
     if result.get("status") == "success" and result.get("reviews"):
