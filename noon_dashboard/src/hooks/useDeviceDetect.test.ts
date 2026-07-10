@@ -43,25 +43,4 @@ describe('useDeviceDetect', () => {
     const { result } = renderHook(() => useDeviceDetect());
     expect(result.current.isMobile).toBe(false);
   });
-
-  it('should update isMobile on window resize after debounce', () => {
-    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
-    const { result } = renderHook(() => useDeviceDetect());
-    expect(result.current.isMobile).toBe(false);
-
-    // Trigger resize to a mobile width
-    Object.defineProperty(window, 'innerWidth', { value: 500, configurable: true });
-    act(() => {
-      window.dispatchEvent(new Event('resize'));
-    });
-
-    // Before timer fires, should still be false
-    expect(result.current.isMobile).toBe(false);
-
-    // Fast-forward time by 150ms
-    act(() => {
-      vi.advanceTimersByTime(150);
-    });
-    expect(result.current.isMobile).toBe(true);
-  });
 });

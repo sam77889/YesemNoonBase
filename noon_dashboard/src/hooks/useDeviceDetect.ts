@@ -17,7 +17,7 @@ export function useDeviceDetect() {
   const [isMobile, setIsMobile] = useState<boolean>(checkIsMobile);
 
   useEffect(() => {
-    let timeoutId: any;
+    let timeoutId: number;
     const handleResize = () => {
       // 150ms 防抖，避免旋转屏幕或拖拽窗口时的瞬时高频计算
       window.clearTimeout(timeoutId);
