@@ -94,3 +94,11 @@ All **4 test cases** passed successfully:
 - **Files Changed**:
   - `noon_dashboard/src/hooks/useDeviceDetect.ts`
   - `noon_dashboard/src/hooks/useDeviceDetect.test.ts`
+
+## 8. Second Fixes Applied
+- **What was fixed**:
+  - `src/hooks/useDeviceDetect.test.ts`: Re-added the debounce test case to verify the 150ms debounce and resize event handling, overriding previous spec.
+- **Test Command**: `npm run test` (in `noon_dashboard`)
+- **Test Results**: All 4 test cases passed successfully.
+- **Files Changed**:
+  - `noon_dashboard/src/hooks/useDeviceDetect.test.ts`
