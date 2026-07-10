@@ -21,7 +21,7 @@ const SystemLogsPage = lazy(() => import('./components/SystemLogsPage').then(m =
 type TabId = 'overview' | 'scraper' | 'fetcher' | 'database' | 'sku' | 'category' | 'logs';
 const NAV_ITEMS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: '大盘总览', icon: LayoutDashboard },
-  { id: 'scraper', label: '付费搜查', icon: Terminal },
+  { id: 'scraper', label: '外部搜索', icon: Terminal },
   { id: 'fetcher', label: '本地直搜', icon: Zap },
   { id: 'database', label: '数据库', icon: Database },
   { id: 'sku', label: '单品分析', icon: MessageSquare },
@@ -29,7 +29,38 @@ const NAV_ITEMS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'logs', label: '系统日志', icon: Terminal },
 ];
 
+import { useDeviceDetect } from './hooks/useDeviceDetect';
+import { MobileApp } from './pages/MobileApp';
+
 export default function App() {
+  const { isMobile } = useDeviceDetect();
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  // 监听 popstate 确保浏览器前进/后退正常运行
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 路由判定逻辑
+  useEffect(() => {
+    if (isMobile && currentPath !== '/mobile') {
+      window.history.pushState(null, '', '/mobile');
+      setCurrentPath('/mobile');
+    } else if (!isMobile && currentPath === '/mobile') {
+      window.history.pushState(null, '', '/');
+      setCurrentPath('/');
+    }
+  }, [isMobile, currentPath]);
+
+  // 分流渲染
+  if (currentPath === '/mobile') {
+    return <MobileApp />;
+  }
+
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -43,6 +74,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [scrapePages, setScrapePages] = useState(1);
   const [scrapeProvider, setScrapeProvider] = useState<'scraperapi' | 'oxylabs'>('scraperapi');
+  const [scrapeApiKey, setScrapeApiKey] = useState('');
+  const [scrapeApiUrl, setScrapeApiUrl] = useState('');
+  const [scrapeUsername, setScrapeUsername] = useState('');
+  const [scrapePassword, setScrapePassword] = useState('');
   const [fetcherQuery, setFetcherQuery] = useState('');
   const [fetcherPages, setFetcherPages] = useState(1);
   const [analysisSku, setAnalysisSku] = useState<string | undefined>(undefined);
@@ -60,7 +95,15 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 
-  const handleScrape = async (e: React.FormEvent) => { e.preventDefault(); if (!searchQuery.trim()) return; await sc.triggerScrape(searchQuery, scrapePages, scrapeProvider); setSearchQuery(''); };
+  const handleScrape = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    const creds = scrapeProvider === 'scraperapi'
+      ? { apiKey: scrapeApiKey.trim() || undefined, apiUrl: scrapeApiUrl.trim() || undefined }
+      : { username: scrapeUsername.trim() || undefined, password: scrapePassword.trim() || undefined };
+    await sc.triggerScrape(searchQuery, scrapePages, scrapeProvider, creds);
+    setSearchQuery('');
+  };
   const handleFetcherScrape = async (e: React.FormEvent) => { e.preventDefault(); if (!fetcherQuery.trim()) return; await sc.triggerScrape(fetcherQuery, fetcherPages, 'fetcher'); setFetcherQuery(''); };
   const handleBatchDelete = async (skus: string[]) => {
     if (!skus.length) return;
@@ -95,7 +138,7 @@ export default function App() {
       <div className="content">
         <header className="topbar">
           <button ref={hamburgerRef} type="button" className="icon-btn" aria-label="打开导航菜单" aria-expanded={drawerOpen} aria-controls="sidebar" onClick={() => setDrawerOpen(true)}><Menu size={20} aria-hidden="true" /></button>
-          <span className="topbar-title">NOON 洞察</span>
+          <span className="topbar-title">一森数字科技</span>
           <span className="topbar-spacer" />
           <ThemeToggle />
           <span className="status-pill" role="status" aria-label="系统状态：在线"><span className="status-dot" aria-hidden="true" /><span>在线</span></span>
@@ -104,7 +147,7 @@ export default function App() {
           <Suspense fallback={<PageSpinner />}>
             <AnimatePresence mode="wait">
               {activeTab === 'overview' && <OverviewPage key="overview" filterText={gf.filterText} onFilterTextChange={gf.setFilterText} selectedCategory={gf.selectedCategory} onCategoryChange={gf.setSelectedCategory} categoryTabs={gf.categoryTabs} overviewParams={gf.overviewParams} />}
-              {activeTab === 'scraper' && <ScraperPage key="scraper" searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} scrapePages={scrapePages} onScrapePagesChange={setScrapePages} scrapeProvider={scrapeProvider} onScrapeProviderChange={setScrapeProvider} scraping={sc.scraping} waitingForLog={sc.waitingForLog} onSubmit={handleScrape} tasks={tasks} />}
+              {activeTab === 'scraper' && <ScraperPage key="scraper" searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} scrapePages={scrapePages} onScrapePagesChange={setScrapePages} scrapeProvider={scrapeProvider} onScrapeProviderChange={setScrapeProvider} externalApiKey={scrapeApiKey} onExternalApiKeyChange={setScrapeApiKey} externalApiUrl={scrapeApiUrl} onExternalApiUrlChange={setScrapeApiUrl} externalUsername={scrapeUsername} onExternalUsernameChange={setScrapeUsername} externalPassword={scrapePassword} onExternalPasswordChange={setScrapePassword} scraping={sc.scraping} waitingForLog={sc.waitingForLog} onSubmit={handleScrape} tasks={tasks} />}
               {activeTab === 'fetcher' && <FetcherPage key="fetcher" fetcherQuery={fetcherQuery} onFetcherQueryChange={setFetcherQuery} fetcherPages={fetcherPages} onFetcherPagesChange={setFetcherPages} scraping={sc.scraping} waitingForLog={sc.waitingForLog} onSubmit={handleFetcherScrape} tasks={tasks} />}
               {activeTab === 'database' && <DatabasePage key="database" items={listData?.items ?? []} total={listData?.total ?? 0} page={gf.page} pageSize={gf.pageSize} onPageChange={gf.setPage} onPageSizeChange={gf.setPageSize} onSortingChange={gf.setSort} selectedCategory={gf.selectedCategory} onCategoryChange={gf.setSelectedCategory} categoryTabs={gf.categoryTabs} onRowClick={(sku: string) => setSelectedSku(sku)} onBatchDelete={handleBatchDelete} />}
               {activeTab === 'sku' && <motion.div key="sku" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><SkuAnalysisPage initialSku={analysisSku} autoRun={autoRunAnalysis} onAutoRunConsumed={() => setAutoRunAnalysis(false)} onExecutionUpdate={sc.handleAnalysisExecutionUpdate} /></motion.div>}
