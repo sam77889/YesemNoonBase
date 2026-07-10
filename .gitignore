@@ -50,6 +50,14 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Data & runtime (never commit the live SQLite DB / logs)
+noon_api/*.db
+noon_api/*.db.*
+noon_api/*.db~*
+noon_api/*Stashed*
+noon_api/logs/
+.workbuddy/
+
 # IDEs and Tools
 .vscode/
 .idea/

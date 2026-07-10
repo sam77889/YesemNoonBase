@@ -141,6 +141,12 @@ async def save_products_to_db(db: AsyncSession, products: list[dict]) -> int:
                 existing.product_url = product_data.get("product_url") or existing.product_url
                 existing.is_express = product_data.get("is_express", existing.is_express)
                 existing.seller_name = product_data.get("seller_name") or existing.seller_name
+                existing.price = product_data.get("price") or existing.price
+                existing.original_price = product_data.get("original_price") or existing.original_price
+                existing.discount_percent = product_data.get("discount_percent") or existing.discount_percent
+                existing.rating = product_data.get("rating") or existing.rating
+                existing.review_count = product_data.get("review_count") or existing.review_count
+                existing.sold_recently = product_data.get("sold_recently") or existing.sold_recently
                 existing.updated_at = datetime.utcnow()
             else:
                 # 插入新商品
@@ -153,6 +159,12 @@ async def save_products_to_db(db: AsyncSession, products: list[dict]) -> int:
                     product_url=product_data.get("product_url"),
                     is_express=product_data.get("is_express", False),
                     seller_name=product_data.get("seller_name"),
+                    price=product_data.get("price"),
+                    original_price=product_data.get("original_price"),
+                    discount_percent=product_data.get("discount_percent"),
+                    rating=product_data.get("rating"),
+                    review_count=product_data.get("review_count"),
+                    sold_recently=product_data.get("sold_recently"),
                 )
                 db.add(new_product)
 
@@ -166,6 +178,7 @@ async def save_products_to_db(db: AsyncSession, products: list[dict]) -> int:
                     discount_percent=product_data.get("discount_percent"),
                     rating=product_data.get("rating"),
                     review_count=product_data.get("review_count"),
+                    sold_recently=product_data.get("sold_recently"),
                     seller_name=product_data.get("seller_name"),
                     raw_data=product_data,
                 )

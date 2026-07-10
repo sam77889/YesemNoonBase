@@ -31,6 +31,14 @@ class TrackedProduct(Base):
     created_at = Column(DateTime, default=datetime.utcnow, comment="首次录入时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="最后更新时间")
 
+    # ── 冗余最新快照数据（用于加速仪表盘查询） ──
+    price = Column(Float, nullable=True, comment="当前售价")
+    original_price = Column(Float, nullable=True, comment="原价")
+    discount_percent = Column(Float, nullable=True, comment="折扣百分比")
+    rating = Column(Float, nullable=True, comment="商品评分 (1-5)")
+    review_count = Column(Integer, nullable=True, comment="评论数量")
+    sold_recently = Column(Integer, nullable=True, comment="近期销量")
+
     # ── 关联：一个商品有多个价格快照 ──
     price_snapshots = relationship("PriceSnapshot", back_populates="product", lazy="selectin")
     # ── 关联：一个商品有多条评论 ──
@@ -80,6 +88,7 @@ class PriceSnapshot(Base):
     discount_percent = Column(Float, nullable=True, comment="折扣百分比")
     rating = Column(Float, nullable=True, comment="商品评分 (1-5)")
     review_count = Column(Integer, nullable=True, comment="评论数量")
+    sold_recently = Column(Integer, nullable=True, comment="近期销量 (如 60+ sold recently)")
     seller_name = Column(String(100), nullable=True, comment="当前卖家名称")
     scraped_at = Column(DateTime, default=datetime.utcnow, comment="数据抓取时间")
     raw_data = Column(JSON, nullable=True, comment="原始 JSON 数据（调试用）")

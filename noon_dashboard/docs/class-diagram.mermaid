@@ -1,0 +1,139 @@
+%% NOON Dashboard 性能优化 — 类图
+%% 文件: docs/class-diagram.mermaid
+
+classDiagram
+    direction TB
+
+    class TrackedProduct {
+        +String sku
+        +String title
+        +String brand
+        +String category
+        +String status
+        +DateTime updated_at
+    }
+
+    class PriceSnapshot {
+        +String sku
+        +Float price
+        +Integer review_count
+        +Float rating
+        +DateTime scraped_at
+    }
+
+    TrackedProduct "1" --> "many" PriceSnapshot : price_snapshots
+
+    class CategoryNormalizer {
+        <<app/utils/category.py>>
+        +CATEGORY_MAP dict
+        +normalize_category(category, title) str
+        +build_category_filter(label, model) ColumnElement
+        +estimate_sales(review_count, price, rating) int
+    }
+
+    class ProductQueryService {
+        <<app/api/products.py>>
+        +list_products(skip, limit, status, category, q, sort, order) PaginatedProducts
+        +get_product_stats(category) DistributionStats
+        +list_categories() list
+        -_latest_snapshot_subquery() Subquery
+        -_build_sort_clause(sort, order, subquery) ColumnElement
+    }
+
+    class PaginatedProducts {
+        +list~ProductResponse~ items
+        +int total
+    }
+
+    class DistributionStats {
+        +int total_products
+        +int active_products
+        +int total_snapshots
+        +list~CategoryCount~ categories
+        +list~PriceDistBucket~ price_distribution
+        +list~ScatterDatum~ scatter_data
+        +list~BrandRankDatum~ brand_ranking
+    }
+
+    class CategoryCount {
+        +str label
+        +int count
+    }
+
+    class ScatterDatum {
+        +str name
+        +float price
+        +int sales
+        +int reviews
+        +float rating
+    }
+
+    class BrandRankDatum {
+        +str name
+        +int 商品数
+        +int 总评论
+        +float 均分
+    }
+
+    class PriceDistBucket {
+        +str name
+        +int productCount
+        +int totalReviews
+    }
+
+    ProductQueryService ..> CategoryNormalizer : uses
+    ProductQueryService ..> PaginatedProducts : returns
+    ProductQueryService ..> DistributionStats : returns
+    ProductQueryService ..> TrackedProduct : queries
+    ProductQueryService ..> PriceSnapshot : queries
+
+    class useProducts {
+        <<hook: src/hooks/useProducts.ts>>
+        +useProducts(params ProductQueryParams) UseQueryResult~PaginatedProducts~
+    }
+
+    class useProductDistribution {
+        <<hook>>
+        +useProductDistribution(category string) UseQueryResult~DistributionStats~
+    }
+
+    class useCategories {
+        <<hook>>
+        +useCategories() UseQueryResult~CategoryCount[]~
+    }
+
+    class useScrapeController {
+        <<hook: src/hooks/useScrapeController.ts>>
+        +scraping boolean
+        +waitingForLog boolean
+        +executionBlocks ExecutionBlock[]
+        +triggerScrape(query, pages, provider) Promise
+        -pollTaskUntilDone(jobId) void
+        -handleExecutionUpdate(...) void
+    }
+
+    class useGlobalFilters {
+        <<hook: src/hooks/useGlobalFilters.ts>>
+        +selectedCategory string
+        +filterText string
+        +sortConfig SortConfig
+        +pagination PaginationState
+        +setSelectedCategory(v) void
+        +setFilterText(v) void
+        +setSortConfig(v) void
+        +setPagination(v) void
+    }
+
+    class ProductQueryParams {
+        +int page
+        +int pageSize
+        +string category
+        +string q
+        +string sort
+        +string order
+    }
+
+    useProducts ..> ProductQueryParams : input
+    useProducts ..> PaginatedProducts : output
+    useProductDistribution ..> DistributionStats : output
+    useCategories ..> CategoryCount : output

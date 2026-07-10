@@ -207,6 +207,12 @@ def parse_noon_search_html(html: str, query: str = "") -> list[dict]:
                     if not re.match(r'^[nN][a-zA-Z0-9]{6,20}$', q):
                         category = q
 
+                # 从 nudges 提取近期销量，如 "60+ sold recently" → 60
+                sold_recently = None
+                sold_match = re.search(r'text:"(\d+)\+?\s*sold recently"', chunk)
+                if sold_match:
+                    sold_recently = int(sold_match.group(1))
+
                 # 计算折扣
                 discount_percent = None
                 if original_price and price and original_price > price:
@@ -228,6 +234,7 @@ def parse_noon_search_html(html: str, query: str = "") -> list[dict]:
                         "is_express": False,
                         "currency": "AED",
                         "discount_percent": discount_percent,
+                        "sold_recently": sold_recently,
                     })
             if tsr_products:
                 logger.info(f"[Parser] 从 __TSR__ 中正则提取到 {len(tsr_products)} 个商品")

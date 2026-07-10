@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Activity, LayoutDashboard, Terminal, Database, Zap, MessageSquare, Menu } from 'lucide-react';
+import { Activity, LayoutDashboard, Terminal, Database, Zap, MessageSquare, Layers, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from './api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,16 +14,18 @@ const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ defa
 const ScraperPage = lazy(() => import('./pages/ScraperPage').then(m => ({ default: m.ScraperPage })));
 const FetcherPage = lazy(() => import('./pages/FetcherPage').then(m => ({ default: m.FetcherPage })));
 const DatabasePage = lazy(() => import('./pages/DatabasePage').then(m => ({ default: m.DatabasePage })));
-const AnalysisPage = lazy(() => import('./pages/AnalysisPage').then(m => ({ default: m.AnalysisPage })));
+const SkuAnalysisPage = lazy(() => import('./pages/SkuAnalysisPage').then(m => ({ default: m.SkuAnalysisPage })));
+const CategoryAnalysisPage = lazy(() => import('./pages/CategoryAnalysisPage').then(m => ({ default: m.CategoryAnalysisPage })));
 const SystemLogsPage = lazy(() => import('./components/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 
-type TabId = 'overview' | 'scraper' | 'fetcher' | 'database' | 'analysis' | 'logs';
+type TabId = 'overview' | 'scraper' | 'fetcher' | 'database' | 'sku' | 'category' | 'logs';
 const NAV_ITEMS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: '大盘总览', icon: LayoutDashboard },
   { id: 'scraper', label: '付费搜查', icon: Terminal },
   { id: 'fetcher', label: '本地直搜', icon: Zap },
   { id: 'database', label: '数据库', icon: Database },
-  { id: 'analysis', label: '深度分析', icon: MessageSquare },
+  { id: 'sku', label: '单品分析', icon: MessageSquare },
+  { id: 'category', label: '类目分析', icon: Layers },
   { id: 'logs', label: '系统日志', icon: Terminal },
 ];
 
@@ -82,7 +84,6 @@ export default function App() {
       <div className="app-background" aria-hidden="true" />
       <a href="#main-content" className="skip-link">跳到主内容</a>
       <aside id="sidebar" className={`sidebar ${drawerOpen ? 'open' : ''}`} aria-label="侧边导航">
-        <button type="button" className="icon-btn sidebar-close" aria-label="关闭导航菜单" onClick={() => setDrawerOpen(false)}><Menu size={20} aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>
         <div className="sidebar-logo"><Activity size={24} color="var(--primary)" aria-hidden="true" /><span>一森数字科技</span></div>
         {renderNav(() => setDrawerOpen(false))}
         <div className="sidebar-footer">
@@ -106,13 +107,14 @@ export default function App() {
               {activeTab === 'scraper' && <ScraperPage key="scraper" searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} scrapePages={scrapePages} onScrapePagesChange={setScrapePages} scrapeProvider={scrapeProvider} onScrapeProviderChange={setScrapeProvider} scraping={sc.scraping} waitingForLog={sc.waitingForLog} onSubmit={handleScrape} tasks={tasks} />}
               {activeTab === 'fetcher' && <FetcherPage key="fetcher" fetcherQuery={fetcherQuery} onFetcherQueryChange={setFetcherQuery} fetcherPages={fetcherPages} onFetcherPagesChange={setFetcherPages} scraping={sc.scraping} waitingForLog={sc.waitingForLog} onSubmit={handleFetcherScrape} tasks={tasks} />}
               {activeTab === 'database' && <DatabasePage key="database" items={listData?.items ?? []} total={listData?.total ?? 0} page={gf.page} pageSize={gf.pageSize} onPageChange={gf.setPage} onPageSizeChange={gf.setPageSize} onSortingChange={gf.setSort} selectedCategory={gf.selectedCategory} onCategoryChange={gf.setSelectedCategory} categoryTabs={gf.categoryTabs} onRowClick={(sku: string) => setSelectedSku(sku)} onBatchDelete={handleBatchDelete} />}
-              {activeTab === 'analysis' && <motion.div key="analysis" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><AnalysisPage initialSku={analysisSku} autoRun={autoRunAnalysis} onAutoRunConsumed={() => setAutoRunAnalysis(false)} onExecutionUpdate={sc.handleAnalysisExecutionUpdate} categoryTabs={gf.categoryTabs} /></motion.div>}
+              {activeTab === 'sku' && <motion.div key="sku" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><SkuAnalysisPage initialSku={analysisSku} autoRun={autoRunAnalysis} onAutoRunConsumed={() => setAutoRunAnalysis(false)} onExecutionUpdate={sc.handleAnalysisExecutionUpdate} /></motion.div>}
+              {activeTab === 'category' && <motion.div key="category" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}><CategoryAnalysisPage categoryTabs={gf.categoryTabs} onExecutionUpdate={sc.handleAnalysisExecutionUpdate} /></motion.div>}
               {activeTab === 'logs' && <motion.div key="logs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ height: 'calc(100% - 0.5rem)' }}><SystemLogsPage blocks={sc.executionBlocks} onClear={sc.clearExecutionBlocks} /></motion.div>}
             </AnimatePresence>
           </Suspense>
         </main>
       </div>
-      <PriceTrendModal selectedSku={selectedSku} priceHistory={priceHistory} refetchPriceHistory={refetchPriceHistory} onClose={() => setSelectedSku(null)} onGoToAnalysis={(sku) => { setAnalysisSku(sku); setActiveTab('analysis'); setSelectedSku(null); }} />
+      <PriceTrendModal selectedSku={selectedSku} priceHistory={priceHistory} refetchPriceHistory={refetchPriceHistory} onClose={() => setSelectedSku(null)} onGoToAnalysis={(sku) => { setAnalysisSku(sku); setAutoRunAnalysis(true); setActiveTab('sku'); setSelectedSku(null); }} />
     </div>
   );
 }

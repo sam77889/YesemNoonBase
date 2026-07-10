@@ -109,7 +109,7 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
           border: isOpen ? '1px solid var(--primary)' : '1px solid var(--panel-border)',
           borderRadius: 'inherit',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          color: disabled ? 'var(--text-muted)' : 'white',
+          color: disabled ? 'var(--text-muted)' : 'var(--text)',
           opacity: disabled ? 0.6 : 1,
           transition: 'all 0.2s ease',
           outline: 'none',
@@ -136,13 +136,13 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
               left: 0,
               width: '100%',
               minWidth: '130px',
-              background: 'rgba(20, 23, 35, 0.95)',
+              background: 'var(--bg-elevated)',
               backdropFilter: 'blur(16px)',
               border: '1px solid var(--border-strong)',
               borderRadius: '12px',
               padding: '0.4rem',
               zIndex: 50,
-              boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0,0,0,0.5)'
+              boxShadow: 'var(--shadow-lg)'
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxHeight: '250px', overflowY: 'auto' }}>
@@ -168,8 +168,8 @@ export function CustomSelect({ value, options, onChange, disabled, style, classN
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: isSelected ? 'rgba(96, 165, 250, 0.15)' : isFocused ? 'var(--surface-3)' : 'transparent',
-                      color: isSelected ? '#60a5fa' : 'var(--text-main)',
+                      background: isSelected ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : isFocused ? 'var(--surface-3)' : 'transparent',
+                      color: isSelected ? 'var(--primary)' : 'var(--text-main)',
                       fontSize: '0.85rem',
                       transition: 'background 0.15s'
                     }}

@@ -140,7 +140,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({
             style={{ cursor: 'pointer', userSelect: 'none' }}
             onClick={column.getToggleSortingHandler()}
           >
-            累计评论 (销量)
+            累计评论
             {{
               asc: <ArrowUp size={14} />,
               desc: <ArrowDown size={14} />,
@@ -153,6 +153,32 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({
         return (
           <div style={{ fontWeight: 700, color: 'var(--success)', fontSize: '1.1rem' }}>
             {val != null ? val.toLocaleString() : '0'}
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'sold_recently',
+      header: ({ column }) => {
+        return (
+          <div
+            className="flex items-center gap-1"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={column.getToggleSortingHandler()}
+          >
+            近期销量
+            {{
+              asc: <ArrowUp size={14} />,
+              desc: <ArrowDown size={14} />,
+            }[column.getIsSorted() as string] ?? <ArrowUpDown size={14} opacity={0.3} />}
+          </div>
+        )
+      },
+      cell: ({ getValue }) => {
+        const val = getValue<number | null>();
+        return (
+          <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '1.1rem' }}>
+            {val != null ? `${val}+` : '-'}
           </div>
         );
       }
@@ -287,7 +313,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({
       {/* Table Wrapper */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ background: 'rgba(25, 28, 41, 0.9)', backdropFilter: 'blur(12px)' }}>
+          <thead style={{ background: 'var(--bg-elevated)', backdropFilter: 'blur(12px)' }}>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
@@ -371,7 +397,7 @@ export const DatabaseTable: React.FC<DatabaseTableProps> = ({
             }}
           >
             {PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size} style={{ background: '#191c29' }}>
+              <option key={size} value={size} style={{ background: 'var(--bg-elevated)' }}>
                 {size} 条/页
               </option>
             ))}

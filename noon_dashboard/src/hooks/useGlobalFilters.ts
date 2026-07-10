@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
+import { ALL_CATEGORY_LABELS } from '../lib/categoryMap';
 import type { CategoryCount, ProductQueryParams, SortState, OverviewQueryParams } from '../types';
 
 /**
@@ -24,10 +25,14 @@ export function useGlobalFilters() {
     refetchInterval: 30000,
     staleTime: 10000,
   });
-  
+
+  // 合并静态映射分类与后端实际计数，确保所有分类都显示
   const categoryTabs = useMemo(() => {
-    if (!Array.isArray(rawCounts)) return [];
-    return rawCounts.map(item => [item.label, item.count] as [string, number]);
+    const countMap = new Map<string, number>();
+    if (Array.isArray(rawCounts)) {
+      rawCounts.forEach(item => countMap.set(item.label, item.count));
+    }
+    return ALL_CATEGORY_LABELS.map(label => [label, countMap.get(label) ?? 0] as [string, number]);
   }, [rawCounts]);
 
   // 过滤/排序/页大小变化时重置到第 1 页（避免停留在不存在的页）

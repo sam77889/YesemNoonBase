@@ -1,6 +1,7 @@
-import { MessageSquare, RefreshCw, Loader2 } from 'lucide-react';
+import { MessageSquare, RefreshCw, Loader2, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { CategoryAnalysisResponse } from '../api';
+import type { AnalysisMode, ExecutionUpdate } from '../types';
 import { useReviewAnalysis, isCategoryAnalysis } from '../hooks/useReviewAnalysis';
 import { AnalysisToolbar } from '../components/analysis/AnalysisToolbar';
 import { StatusBanner } from '../components/analysis/StatusBanner';
@@ -10,9 +11,9 @@ import { CategoryAggregateBanner } from '../components/analysis/CategoryAggregat
 import { AiSummaryCard } from '../components/analysis/AiSummaryCard';
 import { AnalysisCharts } from '../components/analysis/AnalysisCharts';
 import { ReviewsList } from '../components/analysis/ReviewsList';
-import type { ExecutionUpdate } from '../types';
 
-interface AnalysisPageProps {
+interface AnalysisViewProps {
+  mode: AnalysisMode; // 固定模式：'sku' 单品分析 / 'category' 类目聚合
   initialSku?: string;
   autoRun?: boolean;
   onAutoRunConsumed?: () => void;
@@ -20,16 +21,15 @@ interface AnalysisPageProps {
   categoryTabs?: [string, number][];
 }
 
-export function AnalysisPage({
+export function AnalysisView({
+  mode,
   initialSku,
   autoRun,
   onAutoRunConsumed,
   onExecutionUpdate,
   categoryTabs,
-}: AnalysisPageProps) {
+}: AnalysisViewProps) {
   const {
-    mode,
-    setMode,
     skuInput,
     setSkuInput,
     selectedCategory,
@@ -39,10 +39,10 @@ export function AnalysisPage({
     analyzeSku,
     refreshSku,
     analyzeCategory,
-  } = useReviewAnalysis({ initialSku, autoRun, onAutoRunConsumed, onExecutionUpdate });
+  } = useReviewAnalysis({ mode, initialSku, autoRun, onAutoRunConsumed, onExecutionUpdate });
 
   const isCategoryData = isCategoryAnalysis(data ?? ({} as never));
-  // 当前数据是否匹配当前模式（避免类目模式下显示单 SKU 报告，反之亦然）
+  // 当前数据是否匹配当前页面模式（避免类目页误显单品报告，反之亦然）
   const dataMatchesMode = data ? (mode === 'category' ? isCategoryData : !isCategoryData) : false;
 
   const renderLoadingBanner = () => (
@@ -116,6 +116,8 @@ export function AnalysisPage({
     );
   };
 
+  const isSku = mode === 'sku';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -126,15 +128,19 @@ export function AnalysisPage({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-            <MessageSquare size={28} style={{ color: 'var(--primary)' }} />
-            深度分析
+            {isSku
+              ? <MessageSquare size={28} style={{ color: 'var(--primary)' }} />
+              : <Layers size={28} style={{ color: 'var(--primary)' }} />}
+            {isSku ? '单品分析' : '类目分析'}
           </h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            输入 SKU 或选择类目，获取 AI 评论分析、情感趋势与用户画像
+            {isSku
+              ? '输入 SKU，获取 AI 评论分析、情感趋势与用户画像'
+              : '选择类目，聚合该品类下所有商品的评论洞察'}
           </p>
         </div>
-        {/* 当有评论数据时，显示「重新抓取」按钮 */}
-        {data && data.count > 0 && mode === 'sku' && skuInput && (
+        {/* 单品模式且有评论数据时，显示「重新抓取」按钮 */}
+        {data && data.count > 0 && isSku && skuInput && (
           <button
             type="button"
             className="btn"
@@ -159,8 +165,9 @@ export function AnalysisPage({
 
       <AnalysisToolbar
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={() => {}}
         loading={loading}
+        showModeSwitch={false}
         skuInput={skuInput}
         onSkuInputChange={setSkuInput}
         onAnalyzeSku={() => void analyzeSku(skuInput)}

@@ -28,34 +28,54 @@ from app.services.category_mapping import get_chinese_label
 # 类目过滤哨兵值（前后端必须一致）
 UNCATEGORIZED_PARAM = '__UNCATEGORIZED__'
 
+# 已知英文类目集合（与前端 categoryMap.ts 的 CATEGORY_LABEL_TO_ENGLISH 完全对齐，小写形式）。
+# 不在该集合内的原始 category 视为"未分类"，保证 /stats/categories 计数与 __UNCATEGORIZED__
+# 过滤口径一致，避免"tab 显示 N / 点击列表 0"的体验断裂。
+KNOWN_CATEGORIES_LOWER: frozenset[str] = frozenset({
+    'massage gun', 'massage guns', 'massage muscle stimulators', 'massager',
+    'neck massager', 'eye massager',
+    'handheld fan',
+    'ice tray', 'ice mold', 'ice cube trays', 'ice cube tray',
+    'egg boiler', 'egg cooker', 'egg steamer',
+    'yoga mat', 'yoga mats',
+    'power bank', 'portable charger',
+    'bluetooth earbuds', 'wireless earphones', 'bluetooth headset',
+    'phone case', 'phone cover', 'mobile phone case',
+    'air fryer', 'air fryers',
+    'storage box', 'organizer', 'storage organizer',
+    'usb cable', 'charging cable', 'data cable',
+    'desk lamp', 'table lamp', 'reading lamp',
+    'makeup brush', 'makeup brush set', 'cosmetic brush',
+    'led strip lights', 'led strip', 'led light strip',
+    'car phone mount', 'car phone holder', 'car mount',
+    'vegetable chopper', 'food chopper', 'kitchen cutter',
+    'silicone kitchen utensils', 'silicone spatula', 'silicone cooking',
+    'neck pillow', 'travel pillow', 'cervical pillow',
+})
+
 router = APIRouter(prefix="/api/v1/products", tags=["商品管理"])
 
 
-# 排序白名单：仅允许这些列参与 ORDER BY，杜绝列名拼接注入
 _COLUMN_SORTS = {
     'updated_at': TrackedProduct.updated_at,
     'created_at': TrackedProduct.created_at,
     'title': TrackedProduct.title,
     'brand': TrackedProduct.brand,
     'sku': TrackedProduct.sku,
+    'price': TrackedProduct.price,
+    'rating': TrackedProduct.rating,
+    'review_count': TrackedProduct.review_count,
+    'sold_recently': TrackedProduct.sold_recently,
 }
-# 价格 / 评分 / 评论数来自「最新快照」，数据库无对应列，需取全量后在内存排序
-_SNAPSHOT_SORTS = {'price', 'rating', 'review_count'}
+_SNAPSHOT_SORTS = set()
 
 # 类目过滤哨兵值（前后端必须一致）
 UNCATEGORIZED_PARAM = '__UNCATEGORIZED__'
 
 
 def _to_item(p: TrackedProduct) -> dict:
-    """将 ORM 对象 + 最新快照映射为前端所需的 dict（与改造前 list_products 行为一致）。"""
+    """将 ORM 对象映射为前端所需的 dict。"""
     d = {c.name: getattr(p, c.name) for c in p.__table__.columns}
-    if p.price_snapshots:
-        latest = max(p.price_snapshots, key=lambda s: s.scraped_at)
-        d['price'] = latest.price
-        d['original_price'] = latest.original_price
-        d['discount_percent'] = latest.discount_percent
-        d['rating'] = latest.rating
-        d['review_count'] = latest.review_count
     return d
 
 
@@ -65,7 +85,11 @@ def _build_where(status: str, category: str | None, q: str | None):
     if category:
         if category == UNCATEGORIZED_PARAM:
             conditions.append(
-                or_(TrackedProduct.category.is_(None), TrackedProduct.category == '')
+                or_(
+                    TrackedProduct.category.is_(None),
+                    TrackedProduct.category == '',
+                    ~func.lower(TrackedProduct.category).in_(KNOWN_CATEGORIES_LOWER),
+                )
             )
         else:
             values = [v.strip() for v in category.split(',') if v.strip()]
@@ -106,34 +130,15 @@ async def list_products(
     order_col = _COLUMN_SORTS.get(sort, TrackedProduct.updated_at)
     direction = desc if order == 'desc' else asc
 
-    if sort in _SNAPSHOT_SORTS:
-        # 快照派生字段无法走 DB order_by，取全量后在内存排序再切片
-        stmt = (
-            select(TrackedProduct)
-            .where(*conditions)
-            .options(selectinload(TrackedProduct.price_snapshots))
-        )
-        products = (await db.execute(stmt)).scalars().all()
-        items = [_to_item(p) for p in products]
-        key = sort
-
-        def _sort_key(d: dict):
-            v = d.get(key)
-            return v if v is not None else (float('-inf') if order == 'desc' else float('inf'))
-
-        items.sort(key=_sort_key, reverse=(order == 'desc'))
-        items = items[skip: skip + limit]
-    else:
-        stmt = (
-            select(TrackedProduct)
-            .where(*conditions)
-            .options(selectinload(TrackedProduct.price_snapshots))
-            .order_by(direction(order_col).nulls_last())
-            .offset(skip)
-            .limit(limit)
-        )
-        products = (await db.execute(stmt)).scalars().all()
-        items = [_to_item(p) for p in products]
+    stmt = (
+        select(TrackedProduct)
+        .where(*conditions)
+        .order_by(direction(order_col).nulls_last())
+        .offset(skip)
+        .limit(limit)
+    )
+    products = (await db.execute(stmt)).scalars().all()
+    items = [_to_item(p) for p in products]
 
     return {"items": items, "total": total}
 
@@ -288,6 +293,11 @@ async def get_category_counts(db: AsyncSession = Depends(get_db)):
         if not cat_val:
             uncategorized_count += count
             continue
+        # 不在已知类目集合内的原始 category 归入"未分类"，与 _build_where 的
+        # __UNCATEGORIZED__ 口径一致，保证 tab 计数与点击过滤结果完全相同。
+        if cat_val.lower().strip() not in KNOWN_CATEGORIES_LOWER:
+            uncategorized_count += count
+            continue
         valid_cats.append(cat_val)
         cat_to_count[cat_val] = count
         
@@ -430,12 +440,18 @@ async def get_overview_stats(
     """大盘总览聚合：服务端复刻前端算法，避免首屏拉取全量数据。"""
     conditions = _build_where("ACTIVE", category, q)
     stmt = (
-        select(TrackedProduct)
+        select(
+            TrackedProduct.sku,
+            TrackedProduct.title,
+            TrackedProduct.brand,
+            TrackedProduct.price,
+            TrackedProduct.review_count,
+            TrackedProduct.rating
+        )
         .where(*conditions)
-        .options(selectinload(TrackedProduct.price_snapshots))
     )
-    products = (await db.execute(stmt)).scalars().all()
-    items = [_to_item(p) for p in products]
+    result = await db.execute(stmt)
+    items = [dict(row._mapping) for row in result]
 
     # summary 与改造前 dynamicStats 语义对齐：
     # - All（无 category）：total_products/active_products 取 ACTIVE 总数，total_reviews 取快照总数
@@ -482,15 +498,7 @@ async def get_product_detail(
     if not product:
         raise HTTPException(status_code=404, detail=f"商品 {sku} 未找到")
 
-    # 从最新快照复制价格数据
     d = {c.name: getattr(product, c.name) for c in product.__table__.columns}
-    if product.price_snapshots:
-        latest = max(product.price_snapshots, key=lambda s: s.scraped_at)
-        d['price'] = latest.price
-        d['original_price'] = latest.original_price
-        d['discount_percent'] = latest.discount_percent
-        d['rating'] = latest.rating
-        d['review_count'] = latest.review_count
     d['price_snapshots'] = product.price_snapshots
     return d
 

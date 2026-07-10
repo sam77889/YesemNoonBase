@@ -82,7 +82,7 @@
   --font-mono: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --z-header: 100;
-  --z-sidebar: 200;
+  --z-sidebar: 400;
   --z-overlay: 300;
   --z-modal: 1000;
 }
@@ -345,18 +345,9 @@ a {
   padding-top: 1rem;
 }
 
-/* 抽屉关闭按钮：仅移动端显示 */
-.sidebar-close {
+/* 移动端抽屉遮罩 */
+.sidebar-overlay {
   display: none;
-}
-@media (max-width: 1024px) {
-  .sidebar-close {
-    display: inline-flex;
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1;
-  }
 }
 
 .status-pill {
@@ -378,12 +369,7 @@ a {
   flex-shrink: 0;
 }
 
-/* 移动端抽屉遮罩 */
-.sidebar-overlay {
-  display: none;
-}
-
-/* 图标按钮 (顶栏 / 关闭) */
+/* 图标按钮 (顶栏 / 打开菜单) */
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -662,42 +648,109 @@ tr:hover {
   overflow: hidden;
 }
 
-/* ---------- 12. 类目 Tabs ---------- */
-.category-tabs {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-.category-tab {
-  padding: 0.5rem 1.1rem;
+/* ---------- 11.5. 图表分类标签与空状态 ---------- */
+.chart-category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(96, 165, 250, 0.05) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.chart-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 0.75rem;
   color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
+}
+
+.chart-empty-state p {
+  font-size: 0.95rem;
   font-weight: 500;
-  transition: background var(--transition), color var(--transition);
-  backdrop-filter: blur(10px);
+  margin: 0;
+}
+
+.chart-empty-state span {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* ---------- 12. 类目下拉选择 ---------- */
+.category-select-wrapper {
+  position: relative;
+  width: 280px;
+  max-width: 100%;
+}
+
+.category-select {
+  width: 100%;
+  padding: 0.7rem 2.75rem 0.7rem 2.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
   font-family: inherit;
-  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-.category-tab:hover {
-  background: var(--surface-3);
-  color: var(--text);
+
+.category-select:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.15);
 }
-.category-tab.active {
-  background: var(--primary);
-  color: var(--primary-contrast);
-  border-color: transparent;
+
+.category-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.25);
 }
-.category-tab-count {
-  opacity: 0.65;
-  font-size: 0.75rem;
-  margin-left: 0.25rem;
+
+.category-select-icon-left {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.category-select-icon-right {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.category-select:focus + .category-select-icon-right {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.category-select option {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.category-select option:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 /* ---------- 13. 状态徽章 ---------- */

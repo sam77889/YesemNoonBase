@@ -23,6 +23,7 @@ export interface Product {
   currency?: string;
   rating?: number;
   review_count?: number;
+  sold_recently?: number | null;
   is_express: boolean;
   status: string;
   updated_at: string;
@@ -50,7 +51,7 @@ export interface Stats {
 // 性能优化 P0-1 / P0-3 新增类型
 // ─────────────────────────────────────────────
 
-export type SortKey = 'price' | 'review_count' | 'rating' | 'updated_at' | 'created_at' | 'title' | 'brand';
+export type SortKey = 'price' | 'review_count' | 'rating' | 'sold_recently' | 'updated_at' | 'created_at' | 'title' | 'brand';
 
 export interface SortState {
   key: SortKey;

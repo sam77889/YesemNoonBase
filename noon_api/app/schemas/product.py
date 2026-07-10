@@ -41,6 +41,7 @@ class ProductResponse(ProductBase):
     discount_percent: Optional[float] = None
     rating: Optional[float] = None
     review_count: Optional[int] = None
+    sold_recently: Optional[int] = None
 
 
 class PriceSnapshotResponse(BaseModel):

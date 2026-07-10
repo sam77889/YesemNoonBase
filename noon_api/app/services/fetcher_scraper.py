@@ -68,6 +68,7 @@ def _adapt(raw: dict, query: str) -> dict:
         "product_url": raw.get("url") or "",
         "rating": _to_float(raw.get("rating")),
         "review_count": _to_int(raw.get("review_count")),
+        "sold_recently": _to_int(raw.get("sold_recently")),
         "seller_name": raw.get("seller") or "",
         "is_express": False,
         "currency": raw.get("currency") or "AED",

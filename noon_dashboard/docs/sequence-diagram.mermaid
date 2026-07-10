@@ -1,0 +1,96 @@
+%% NOON Dashboard 性能优化 — 时序图
+%% 文件: docs/sequence-diagram.mermaid
+%% 包含三条关键链路：翻页/筛选/排序、发起抓取→轮询→刷新、总览页加载
+
+%% ===== 链路 1：翻页/筛选/排序 =====
+sequenceDiagram
+    participant User as 用户
+    participant DBPage as DatabasePage
+    participant GF as useGlobalFilters
+    participant UP as useProducts(params)
+    participant API as FastAPI /products/
+    participant DB as PostgreSQL
+
+    User->>DBPage: 点击排序/翻页/选类目
+    DBPage->>GF: setSortConfig/setPagination/setSelectedCategory
+    Note over GF: 状态变更触发 re-render
+
+    GF->>UP: params={page,pageSize,category,q,sort,order}
+    Note over UP: queryKey变化自动refetch<br/>placeholderData=keepPreviousData
+
+    UP->>API: GET /products/?skip=0&limit=20&category=按摩器&sort=price&order=desc
+    API->>API: build_category_filter("按摩器")→OR复合SQL
+    API->>API: _latest_snapshot_subquery()→窗口函数取最新快照
+    API->>DB: SELECT tp.*, ps.price... JOIN latest_snapshot<br/>WHERE... ORDER BY ps.price DESC LIMIT 20 OFFSET 0
+    DB-->>API: 20行商品+快照字段
+
+    API->>DB: SELECT count(*) WHERE...(同过滤条件)
+    DB-->>API: total=320
+
+    API-->>UP: {items: Product[20], total: 320}
+    UP-->>DBPage: data.items渲染表格, data.total渲染分页器
+    Note over DBPage: 受控模式:不调用<br/>getPaginationRowModel/getSortedRowModel
+
+%% ===== 链路 2：发起抓取→轮询→刷新 =====
+sequenceDiagram
+    participant User as 用户
+    participant App as App.tsx
+    participant SC as useScrapeController
+    participant QC as QueryClient
+    participant API as FastAPI /tasks/
+
+    User->>App: 提交搜索表单
+    App->>SC: triggerScrape(query, pages, provider)
+    SC->>SC: setScraping(true), setWaitingForLog(true)
+    SC->>API: POST /tasks/search {task_type, query, ...}
+    API-->>SC: {job_id}
+
+    SC->>SC: handleExecutionUpdate(jobId,...)创建ExecutionBlock
+    SC->>SC: pollTaskUntilDone(jobId) setInterval 2s
+
+    SC->>QC: invalidateQueries(['tasks'])
+    SC->>QC: invalidateQueries(['products'])
+    SC->>QC: invalidateQueries(['stats'])
+
+    loop 每2s直到SUCCESS/FAILED
+        SC->>QC: refetchQueries(['tasks'])
+        QC->>API: GET /tasks/?limit=20
+        API-->>QC: Task[]
+        QC-->>SC: tasks更新
+        SC->>SC: useEffect(tasks变化)同步executionBlocks
+        alt 任务终态
+            SC->>SC: clearInterval
+            SC->>QC: invalidateQueries(['products'])
+            SC->>QC: invalidateQueries(['stats'])
+            Note over QC: 触发useProducts+useProductDistribution重新拉取
+        end
+    end
+
+    SC-->>App: {scraping, waitingForLog, executionBlocks}
+    App-->>User: 系统日志显示执行块,大盘数据刷新
+
+%% ===== 链路 3：总览页加载（改造后） =====
+sequenceDiagram
+    participant App as App(lazy import)
+    participant OVP as OverviewPage
+    participant UPD as useProductDistribution
+    participant UC as useCategories
+    participant API as FastAPI
+
+    App->>OVP: Suspense > OverviewPage
+    Note over OVP: 不再接收products/filteredProducts props
+
+    OVP->>UPD: useProductDistribution(selectedCategory)
+    OVP->>UC: useCategories()
+
+    par 并行请求
+        UPD->>API: GET /products/stats?category=All
+        API->>API: 聚合全量ACTIVE商品
+        API-->>UPD: DistributionStats
+    and
+        UC->>API: GET /products/categories
+        API-->>UC: [{label,count},...]
+    end
+
+    OVP->>OVP: 直接渲染聚合数据(删除4个useMemo)
+    Note over OVP: stats卡片←DistributionStats<br/>类目tab←useCategories<br/>价格分布图←price_distribution<br/>散点图←scatter_data<br/>品牌TOP10←brand_ranking
