@@ -1,4 +1,5 @@
-import React, { useState, lazy, Suspense, Component, ErrorInfo, ReactNode } from 'react';
+import { useState, lazy, Suspense, Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { LayoutDashboard, Terminal, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '../components/ThemeToggle';
