@@ -78,7 +78,7 @@ export function MobileOverviewPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={priceDistribution} margin={{ top: 10, right: 0, left: -25, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={9} tickLine={false} axisLine={false} angle={-30} textAnchor="end" height={35} interval={0} />
+                <XAxis dataKey="name" stroke="var(--chart-axis)" fontSize={9} tickLine={false} axisLine={false} angle={-45} textAnchor="end" height={45} interval="preserveStartEnd" />
                 <YAxis yAxisId="left" stroke="#60a5fa" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
                 <YAxis yAxisId="right" orientation="right" stroke="#34d399" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
