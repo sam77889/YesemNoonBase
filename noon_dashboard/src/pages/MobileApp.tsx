@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense, Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { LayoutDashboard, Terminal, Activity, Layers } from 'lucide-react';
+import { LayoutDashboard, Terminal, MessageSquare, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { PageSpinner } from '../components/PageSpinner';
@@ -8,16 +8,16 @@ import { PageSpinner } from '../components/PageSpinner';
 // 懒加载移动端专属页面
 const MobileOverviewPage = lazy(() => import('./MobileOverviewPage').then(m => ({ default: m.MobileOverviewPage })));
 const MobileScraperPage = lazy(() => import('./MobileScraperPage').then(m => ({ default: m.MobileScraperPage })));
-const MobileSystemLogsPage = lazy(() => import('./MobileSystemLogsPage').then(m => ({ default: m.MobileSystemLogsPage })));
+const MobileSkuAnalysisPage = lazy(() => import('./MobileSkuAnalysisPage').then(m => ({ default: m.MobileSkuAnalysisPage })));
 const MobileCategoryAnalysisPage = lazy(() => import('./MobileCategoryAnalysisPage').then(m => ({ default: m.MobileCategoryAnalysisPage })));
 
-type TabId = 'overview' | 'scraper' | 'logs' | 'category';
+type TabId = 'overview' | 'scraper' | 'category' | 'sku';
 
 const MOBILE_NAV_ITEMS = [
   { id: 'overview' as TabId, label: '总览', icon: LayoutDashboard },
   { id: 'category' as TabId, label: '品类', icon: Layers },
+  { id: 'sku' as TabId, label: '单品', icon: MessageSquare },
   { id: 'scraper' as TabId, label: '搜索', icon: Terminal },
-  { id: 'logs' as TabId, label: '日志', icon: Activity },
 ];
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -79,9 +79,9 @@ export function MobileApp() {
                   <MobileScraperPage />
                 </motion.div>
               )}
-              {activeTab === 'logs' && (
-                <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
-                  <MobileSystemLogsPage />
+              {activeTab === 'sku' && (
+                <motion.div key="sku" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
+                  <MobileSkuAnalysisPage />
                 </motion.div>
               )}
               {activeTab === 'category' && (

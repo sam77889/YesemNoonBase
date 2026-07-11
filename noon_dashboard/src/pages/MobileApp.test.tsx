@@ -16,8 +16,12 @@ vi.mock('./MobileScraperPage', () => ({
   MobileScraperPage: () => <div data-testid="mobile-scraper">Scraper</div>
 }));
 
-vi.mock('./MobileSystemLogsPage', () => ({
-  MobileSystemLogsPage: () => <div data-testid="mobile-logs">Logs</div>
+vi.mock('./MobileSkuAnalysisPage', () => ({
+  MobileSkuAnalysisPage: () => <div data-testid="mobile-sku">Sku</div>
+}));
+
+vi.mock('./MobileCategoryAnalysisPage', () => ({
+  MobileCategoryAnalysisPage: () => <div data-testid="mobile-category">Category</div>
 }));
 
 // Mock framer-motion to skip animations
@@ -45,8 +49,9 @@ describe('MobileApp Component', () => {
     
     // Tab checks
     expect(screen.getByText('总览')).toBeDefined();
+    expect(screen.getByText('品类')).toBeDefined();
+    expect(screen.getByText('单品')).toBeDefined();
     expect(screen.getByText('搜索')).toBeDefined();
-    expect(screen.getByText('日志')).toBeDefined();
   });
 
   it('renders overview page by default', async () => {
@@ -57,7 +62,7 @@ describe('MobileApp Component', () => {
     });
     
     expect(screen.queryByTestId('mobile-scraper')).toBeNull();
-    expect(screen.queryByTestId('mobile-logs')).toBeNull();
+    expect(screen.queryByTestId('mobile-sku')).toBeNull();
   });
 
   it('switches tabs correctly', async () => {
@@ -68,23 +73,23 @@ describe('MobileApp Component', () => {
       expect(screen.getByTestId('mobile-overview')).toBeDefined();
     });
 
-    // Click scraper tab
-    const scraperTab = screen.getByText('搜索').closest('button');
-    fireEvent.click(scraperTab!);
+    // Click category tab
+    const categoryTab = screen.getByText('品类').closest('button');
+    fireEvent.click(categoryTab!);
 
     await waitFor(() => {
-      expect(screen.getByTestId('mobile-scraper')).toBeDefined();
+      expect(screen.getByTestId('mobile-category')).toBeDefined();
     });
     expect(screen.queryByTestId('mobile-overview')).toBeNull();
 
-    // Click logs tab
-    const logsTab = screen.getByText('日志').closest('button');
-    fireEvent.click(logsTab!);
+    // Click sku tab
+    const skuTab = screen.getByText('单品').closest('button');
+    fireEvent.click(skuTab!);
 
     await waitFor(() => {
-      expect(screen.getByTestId('mobile-logs')).toBeDefined();
+      expect(screen.getByTestId('mobile-sku')).toBeDefined();
     });
-    expect(screen.queryByTestId('mobile-scraper')).toBeNull();
+    expect(screen.queryByTestId('mobile-category')).toBeNull();
   });
 
   it('verifies navigation buttons have proper mobile touch target class', () => {
