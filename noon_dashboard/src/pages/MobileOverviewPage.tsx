@@ -52,7 +52,7 @@ export function MobileOverviewPage() {
           <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>{totalItemsCount}</span>
         </div>
         <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>运行中爬虫数</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>运行中任务数</span>
           <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#eab308' }}>{activeTasksCount}</span>
         </div>
       </div>

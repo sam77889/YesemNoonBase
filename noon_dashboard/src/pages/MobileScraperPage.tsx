@@ -20,7 +20,7 @@ export function MobileScraperPage() {
       {/* 表单卡片 */}
       <div className="card" style={{ padding: '1rem' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>快速提交爬虫任务</div>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>快速提交采集任务</div>
           <input type="text" className="input" placeholder="输入搜索关键词" value={query} onChange={(e) => setQuery(e.target.value)} style={{ height: '48px', padding: '0 0.75rem', fontSize: '0.9rem' }} />
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>页数:</span>
