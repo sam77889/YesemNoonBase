@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, Component, ErrorInfo, ReactNode } from 'react';
 import { LayoutDashboard, Terminal, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -16,6 +16,32 @@ const MOBILE_NAV_ITEMS = [
   { id: 'scraper' as TabId, label: '搜索', icon: Terminal },
   { id: 'logs' as TabId, label: '日志', icon: Activity },
 ];
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('MobileApp ErrorBoundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#ff4d4f' }}>
+          Failed to load page content.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function MobileApp() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -37,25 +63,27 @@ export function MobileApp() {
 
       {/* 主滚动区 */}
       <main className="mobile-main-content">
-        <Suspense fallback={<PageSpinner />}>
-          <AnimatePresence mode="wait">
-            {activeTab === 'overview' && (
-              <motion.div key="overview" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
-                <MobileOverviewPage />
-              </motion.div>
-            )}
-            {activeTab === 'scraper' && (
-              <motion.div key="scraper" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
-                <MobileScraperPage />
-              </motion.div>
-            )}
-            {activeTab === 'logs' && (
-              <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
-                <MobileSystemLogsPage />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<PageSpinner />}>
+            <AnimatePresence mode="wait">
+              {activeTab === 'overview' && (
+                <motion.div key="overview" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
+                  <MobileOverviewPage />
+                </motion.div>
+              )}
+              {activeTab === 'scraper' && (
+                <motion.div key="scraper" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
+                  <MobileScraperPage />
+                </motion.div>
+              )}
+              {activeTab === 'logs' && (
+                <motion.div key="logs" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.15 }}>
+                  <MobileSystemLogsPage />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* 底部导航栏 TabBar */}

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
+import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { MobileApp } from './MobileApp';
 
 afterEach(() => {
   cleanup();
 });
-import { MobileApp } from './MobileApp';
-import React from 'react';
 
 // Mock components to avoid testing actual lazy loaded implementations
 vi.mock('./MobileOverviewPage', () => ({
@@ -88,7 +88,7 @@ describe('MobileApp Component', () => {
     expect(screen.queryByTestId('mobile-scraper')).toBeNull();
   });
 
-  it('verifies touch target size of tab buttons', () => {
+  it('verifies navigation buttons have proper mobile touch target class', () => {
     render(<MobileApp />);
     const buttons = screen.getAllByRole('button');
     // Tab buttons should have class mobile-nav-btn
