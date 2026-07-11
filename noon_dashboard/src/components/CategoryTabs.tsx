@@ -16,6 +16,7 @@ export function CategoryTabs({ tabs, selected, onChange, allLabel = '全部 (All
         className="category-select"
         value={selected}
         onChange={(e) => onChange(e.target.value)}
+        style={{ minHeight: '48px' }}
       >
         {showAll && <option value="All">{allLabel}</option>}
         {tabs.map(([cn, count]) => (

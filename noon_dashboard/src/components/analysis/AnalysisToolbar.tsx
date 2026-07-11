@@ -115,7 +115,7 @@ export function AnalysisToolbar({
               disabled={loading || !selectedCategory}
               onClick={onAnalyzeCategory}
               style={{
-                height: '46px',
+                minHeight: '48px',
                 padding: '0 1.5rem',
                 borderRadius: '16px',
                 whiteSpace: 'nowrap',

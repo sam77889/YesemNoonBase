@@ -92,7 +92,7 @@ describe('MobileApp Component', () => {
     const buttons = screen.getAllByRole('button');
     // Tab buttons should have class mobile-nav-btn
     const navButtons = buttons.filter(b => b.className.includes('mobile-nav-btn'));
-    expect(navButtons.length).toBe(3);
+    expect(navButtons.length).toBe(4);
     // The touch target sizing is defined in CSS via min-width and height
   });
 });
