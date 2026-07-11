@@ -13,7 +13,7 @@ export function MobileOverviewPage() {
   const { data: listData } = useProducts(gf.listParams);
   const { data: tasks = [] } = useTasks();
 
-  const activeTasksCount = tasks.filter(t => t.status === 'running').length;
+  const activeTasksCount = tasks.filter(t => t.status === 'PROCESSING' || t.status === 'PENDING').length;
   const totalItemsCount = listData?.total ?? 0;
 
   // 模拟数据渲染折线图
