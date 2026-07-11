@@ -60,7 +60,7 @@ describe('App Routing Dispatcher', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.resetModules();
-    window.history.pushState(null, '', '/');
+    window.history.replaceState(null, '', '/');
   });
 
   afterEach(() => {

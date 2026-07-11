@@ -73,3 +73,20 @@ Passing Output:
 ### Fix Files Changed
 - `noon_dashboard/src/App.tsx`
 - `noon_dashboard/src/App.test.tsx`
+
+## Structural Refactors (Fixing Performance Leak & History Trap)
+- **Extracted `DesktopApp.tsx`**: Moved all desktop-specific hooks, state, effect hooks, and JSX into `DesktopApp.tsx`.
+- **Cleaned `App.tsx`**: Now solely acts as a lightweight router/dispatcher and conditionally renders `<MobileApp />` or `<DesktopApp />`.
+- **History Trap Fixed**: Replaced `window.history.pushState` with `window.history.replaceState` in `App.tsx` (and test setup) to avoid back-button infinite loops on mobile.
+
+### Refactor Test Evidence
+Command run:
+```bash
+npm run test -- --run
+```
+Result: `Test Files  2 passed (2), Tests  6 passed (6)`
+
+### Refactor Files Changed
+- `noon_dashboard/src/App.tsx` (modified)
+- `noon_dashboard/src/App.test.tsx` (modified)
+- `noon_dashboard/src/DesktopApp.tsx` (created)
